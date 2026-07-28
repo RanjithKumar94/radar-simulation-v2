@@ -29,14 +29,29 @@ let selectedAircraft = null;
 let unknownBlips = [];
 document.getElementById("rwy26Blip").onclick = function(){
 
-    const start = bearingToXY(35, 60);   // R035 at 60 NM
+    let start, heading;
+
+    if(typeof activeRunwayDirection !== "undefined" && activeRunwayDirection === "08"){
+
+        // RWY 08 active: unknown traffic enters from R210 at 60 NM, heading 360
+        start = bearingToXY(210, 60);
+        heading = 360;
+
+    }
+    else{
+
+        // Default (RWY 26): R035 at 60 NM, heading 180
+        start = bearingToXY(35, 60);
+        heading = 180;
+
+    }
 
     unknownBlips.push({
 
         x: start.x,
         y: start.y,
 
-        heading: 180,      // South
+        heading: heading,
         speed: 550,
 
         active: true
@@ -83,12 +98,16 @@ document.getElementById("applyBtn").onclick = function(){
 
     const hdg = document.getElementById("heading").value;
     const lvl = document.getElementById("level").value;
+    const spd = document.getElementById("speedInput").value;
 
     if(hdg !== "")
         selectedAircraft.targetHeading = parseInt(hdg);
 
     if(lvl !== "")
         selectedAircraft.targetLevel = parseInt(lvl);
+
+    if(spd !== "")
+        selectedAircraft.targetSpeed = parseInt(spd);
     const turn =
 document.querySelector('input[name="turnDir"]:checked').value;
 
@@ -227,35 +246,35 @@ function moveAircraft(){
 
 
         // ===============================
-        // Speed (NM per second)
+        // Speed transition toward target speed
+        // (assumed ~5 KT/sec acceleration/deceleration)
         // ===============================
 
-        let movement;
+        if(ac.speed < ac.targetSpeed){
 
-        switch(ac.type){
+            ac.speed += 5;
 
-            case "B777":
-                movement = 5.5 / 60;
-                break;
+            if(ac.speed > ac.targetSpeed){
+                ac.speed = ac.targetSpeed;
+            }
 
-            case "B737":
-            case "A320":
-                movement = 5.0 / 60;
-                break;
+        }
+        else if(ac.speed > ac.targetSpeed){
 
-            case "ATR72":
-                movement = 4 / 60;
-                break;
+            ac.speed -= 5;
 
-            case "DO228":
-                movement = 3.5 / 60;
-                break;
-
-            default:
-                movement = 5.0 / 60;
+            if(ac.speed < ac.targetSpeed){
+                ac.speed = ac.targetSpeed;
+            }
 
         }
 
+        // ===============================
+        // Movement (NM per second), derived
+        // from current speed: 300 KT = 5 NM/min
+        // ===============================
+
+        const movement = ac.speed / 3600;
 
         // ===============================
         // Heading turn
@@ -435,7 +454,7 @@ if(ac.approach){
 
         ac.trail.push({x:ac.x, y:ac.y});
 
-        if(ac.trail.length > 3){
+        if(ac.trail.length > 4){
             ac.trail.shift();
         }
 
