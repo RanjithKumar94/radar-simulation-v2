@@ -665,8 +665,8 @@ const VAD99 = [
     {bearing:128, distance:14},   // A
     {bearing:117, distance:19},   // B
     {bearing:137, distance:25},   // C
-    {bearing:145, distance:23},   // D
-    {bearing:140, distance:14}    // E
+    {bearing:147, distance:23},   // D
+    {bearing:143, distance:14}    // E
 
 ];
 
