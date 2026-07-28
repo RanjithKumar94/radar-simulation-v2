@@ -498,6 +498,16 @@ let rbls = [];
 let rblMode = false;
 let rblFirstAircraft = null;
 
+function updateRblStatus(text){
+
+    const el = document.getElementById("rblStatus");
+
+    if(el){
+        el.textContent = text;
+    }
+
+}
+
 function drawRBLs(){
 
     const activeList =
@@ -990,6 +1000,13 @@ window.onload = function(){
             rblFirstAircraft = null;
 
             rblBtn.style.background = rblMode ? "#007700" : "";
+            rblBtn.textContent = rblMode ? "RBL: ON (click 2 A/C)" : "DRAW RBL";
+
+            updateRblStatus(
+                rblMode
+                ? "RBL mode ON — click an aircraft dot"
+                : "RBL mode off"
+            );
 
             console.log("RBL mode:", rblMode);
 
@@ -1003,6 +1020,7 @@ window.onload = function(){
 
             rbls = [];
             rblFirstAircraft = null;
+            updateRblStatus(rblMode ? "RBL mode ON — click an aircraft dot" : "");
 
         };
 
@@ -1042,7 +1060,7 @@ canvas.addEventListener("click", function(e){
         const hit = activeList.find(ac=>{
             const dx = mx - ac.x;
             const dy = my - ac.y;
-            return Math.sqrt(dx*dx+dy*dy) <= 10;
+            return Math.sqrt(dx*dx+dy*dy) <= 18;
         });
 
         if(hit){
@@ -1051,15 +1069,22 @@ canvas.addEventListener("click", function(e){
 
                 rblFirstAircraft = hit;
                 console.log("RBL: first aircraft =", hit.callsign);
+                updateRblStatus("RBL: " + hit.callsign + " selected — click a second aircraft");
 
             }
             else if(hit !== rblFirstAircraft){
 
                 rbls.push({a:rblFirstAircraft, b:hit});
                 console.log("RBL drawn:", rblFirstAircraft.callsign, "-", hit.callsign);
+                updateRblStatus("RBL drawn: " + rblFirstAircraft.callsign + " – " + hit.callsign);
                 rblFirstAircraft = null;
 
             }
+
+        }
+        else{
+
+            updateRblStatus("RBL mode ON — click an aircraft dot");
 
         }
 
