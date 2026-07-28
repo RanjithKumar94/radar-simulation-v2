@@ -259,11 +259,20 @@ if(ac.heading !== ac.targetHeading){
         // 5 NM per minute
 
         if(!ac.trail) ac.trail = [];
+        if(ac.trailTimer === undefined) ac.trailTimer = 0;
 
-        ac.trail.push({x:ac.x, y:ac.y});
+        ac.trailTimer++;
 
-        if(ac.trail.length > 4){
-            ac.trail.shift();
+        if(ac.trailTimer >= 4){
+
+            ac.trail.push({x:ac.x, y:ac.y});
+
+            if(ac.trail.length > 4){
+                ac.trail.shift();
+            }
+
+            ac.trailTimer = 0;
+
         }
 
         // ===============================
