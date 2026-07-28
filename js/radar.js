@@ -518,32 +518,8 @@ function drawTrafficCircuit(){
 
     const rwy = getActiveRunway();
 
-    let end1, end2;
-
-    if(activeRunway === "0826"){
-
-        // Anchor to the real pavement ends (extended 2NM beyond
-        // each end, same idea as the old bearingToXY(...,12))
-        const geo = getRunway0826Geometry();
-        const ext = metersToPx(2 * 1852);
-
-        end1 = {
-            x: geo.pavementStart08.x - geo.along.x*ext,
-            y: geo.pavementStart08.y - geo.along.y*ext
-        };
-
-        end2 = {
-            x: geo.pavementEnd26.x + geo.along.x*ext,
-            y: geo.pavementEnd26.y + geo.along.y*ext
-        };
-
-    }
-    else{
-
-        end1 = bearingToXY(rwy.bearing1,12);
-        end2 = bearingToXY(rwy.bearing2,12);
-
-    }
+    const end1 = bearingToXY(rwy.bearing1,12);
+    const end2 = bearingToXY(rwy.bearing2,12);
 
     const dx = end2.x - end1.x;
     const dy = end2.y - end1.y;
