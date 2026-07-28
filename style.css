@@ -40,15 +40,15 @@ body{
     display:flex;
     justify-content:center;
     align-items:center;
-    background:#FFFFFF;
+    background:#000000;
     position:relative;
 
 }
 
 #radar{
 
-    background:#FFFFFF;
-    border:2px solid #888888;
+    background:#000000;
+    border:2px solid #333333;
 
 }
 
@@ -62,7 +62,7 @@ body{
     top:15px;
     left:20px;
 
-    color:#0066CC;
+    color:#00ffff;
     font-size:22px;
     font-weight:bold;
 
