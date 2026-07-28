@@ -424,13 +424,6 @@ function drawRunway(){
 
         });
 
-        ctx.fillStyle = "#FFFFFF";
-        ctx.font = "16px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText("08", geo.pavementStart08.x, geo.pavementStart08.y - 12);
-        ctx.fillText("26", geo.pavementEnd26.x, geo.pavementEnd26.y - 12);
-        ctx.textAlign = "left";
-
     }
     else{
 
@@ -445,12 +438,6 @@ function drawRunway(){
         ctx.moveTo(p1.x,p1.y);
         ctx.lineTo(p2.x,p2.y);
         ctx.stroke();
-
-        ctx.fillStyle = "#FFFFFF";
-        ctx.font = "16px Arial";
-
-        ctx.fillText(rwy.label1,p1.x-22,p1.y+8);
-        ctx.fillText(rwy.label2,p2.x+8,p2.y+8);
 
     }
 
@@ -1051,7 +1038,7 @@ function drawAircraft(){
                 const fade = 0.35 + (0.55 * (i+1) / ac.trail.length);
 
                 ctx.beginPath();
-                ctx.arc(pt.x, pt.y, 3, 0, Math.PI*2);
+                ctx.arc(pt.x, pt.y, 3.5, 0, Math.PI*2);
                 ctx.fillStyle = isSelected
                 ? `rgba(255,255,0,${fade})`
                 : `rgba(0,255,0,${fade})`;
