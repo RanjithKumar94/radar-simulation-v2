@@ -58,6 +58,9 @@
         <label>Flight Level</label>
         <input id="level" type="number">
 
+        <label>Speed (KT)</label>
+        <input id="speedInput" type="number">
+
         <label>Turn Direction</label>
 
         <div class="radioRow">
@@ -155,7 +158,12 @@
 
         <h3>Status</h3>
 
-        <p>Radar Range : 60 NM</p>
+        <label>Radar Range</label>
+
+        <select id="rangeSelect">
+            <option value="60" selected>60 NM</option>
+            <option value="30">30 NM</option>
+        </select>
 
         <p id="trafficCount">
             Traffic : 0
