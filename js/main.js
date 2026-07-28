@@ -504,12 +504,25 @@ if(ac.approach){
         // Move aircraft
         // ===============================
 
+        // Trail points are captured every 4 seconds (not every
+        // tick) - at typical speeds, 1 second of movement is
+        // sub-pixel on a 60NM display, so per-tick dots would sit
+        // invisibly on top of each other and the aircraft itself.
         if(!ac.trail) ac.trail = [];
+        if(ac.trailTimer === undefined) ac.trailTimer = 0;
 
-        ac.trail.push({x:ac.x, y:ac.y});
+        ac.trailTimer++;
 
-        if(ac.trail.length > 4){
-            ac.trail.shift();
+        if(ac.trailTimer >= 4){
+
+            ac.trail.push({x:ac.x, y:ac.y});
+
+            if(ac.trail.length > 4){
+                ac.trail.shift();
+            }
+
+            ac.trailTimer = 0;
+
         }
 
         const pixels =
