@@ -270,6 +270,109 @@ function setActiveRunwayFromSelect(value){
 }
 
 // ======================================
+// RWY 08/26 real physical geometry
+// (from actual survey data - not the
+// simplified "CCB sits on the centreline"
+// model used elsewhere in this file)
+// ======================================
+
+const RWY_0826_DATA = {
+
+    lengthM: 3812,          // full pavement length
+    widthM: 60,
+
+    displacedFrom08M: 140,  // 08 landing threshold, in from physical 08 end
+    displacedFrom26M: 240,  // 26 landing threshold, in from physical 26 end
+
+    ccbPerpOffsetM: 400,    // CCB's perpendicular distance from centreline
+
+    // ASSUMPTION: CCB's perpendicular foot on the centreline lands
+    // exactly at the RWY08 displaced (landing) threshold. Flagged
+    // for confirmation - easy to adjust if that's not quite right.
+    ccbFootIsRwy08Threshold: true
+
+};
+
+function metersToPx(m){
+    return nm(m / 1852);
+}
+
+// Computes the real touchdown points / pavement ends for 08/26,
+// all relative to CCB, in canvas pixel space.
+function getRunway0826Geometry(){
+
+    const d = RWY_0826_DATA;
+
+    // "along" = direction of travel landing on 26 (08 -> 26), bearing 080
+    const alongAngle = (80 - 90) * Math.PI / 180;
+    const along = {x:Math.cos(alongAngle), y:Math.sin(alongAngle)};
+
+    // perpendicular to the runway (side CCB sits on - assumption,
+    // flip sign here if it renders on the wrong side)
+    const perp = {x:-along.y, y:along.x};
+
+    function addScaled(base, dir, meters){
+        const px = metersToPx(meters);
+        return {x: base.x + dir.x*px, y: base.y + dir.y*px};
+    }
+
+    // CCB's foot on the centreline = RWY08 landing threshold (assumption above)
+    const touchdown08 = addScaled(CCB, perp, -d.ccbPerpOffsetM);
+
+    const pavementStart08 = addScaled(touchdown08, along, -d.displacedFrom08M);
+    const pavementEnd26   = addScaled(pavementStart08, along, d.lengthM);
+    const touchdown26     = addScaled(pavementEnd26, along, -d.displacedFrom26M);
+
+    return {along, perp, touchdown08, touchdown26, pavementStart08, pavementEnd26};
+
+}
+
+// Landing heading (direction of travel while touching down) per runway direction
+const RWY_LANDING_HEADING = {"08":80, "26":260, "15":155, "33":335};
+
+function getApproachBearing(direction){
+    return (RWY_LANDING_HEADING[direction] + 180) % 360;
+}
+
+function getTouchdownPoint(direction){
+
+    if(direction === "08" || direction === "26"){
+        const geo = getRunway0826Geometry();
+        return direction === "08" ? geo.touchdown08 : geo.touchdown26;
+    }
+
+    // No survey data given yet for 15/33 - falls back to CCB
+    // (zero correction) until that runway's dimensions are provided.
+    return {x: CCB.x, y: CCB.y};
+
+}
+
+// How much to correct "distance to CCB" into "distance to touchdown",
+// projected along the inbound approach track (NM). Positive = touchdown
+// is further along the inbound track than CCB (aircraft has further to
+// go); negative = touchdown is closer than CCB.
+function getTouchdownCorrectionNM(direction){
+
+    if(direction !== "08" && direction !== "26") return 0;
+
+    const geo = getRunway0826Geometry();
+    const touchdown = direction === "08" ? geo.touchdown08 : geo.touchdown26;
+
+    const landingAngle =
+    (RWY_LANDING_HEADING[direction] - 90) * Math.PI / 180;
+
+    const inboundDir = {x:Math.cos(landingAngle), y:Math.sin(landingAngle)};
+
+    const dx = touchdown.x - CCB.x;
+    const dy = touchdown.y - CCB.y;
+
+    const alongPx = dx*inboundDir.x + dy*inboundDir.y;
+
+    return alongPx / PIXELS_PER_NM;
+
+}
+
+// ======================================
 // PART 2
 // Draw Runway
 // ======================================
@@ -278,47 +381,142 @@ function drawRunway(){
 
     const rwy = getActiveRunway();
 
-    const p1 = bearingToXY(rwy.bearing1,10);
-    const p2 = bearingToXY(rwy.bearing2,10);
+    if(activeRunway === "0826"){
 
-    ctx.strokeStyle = "#FFFFFF";
-    ctx.lineWidth = 4;
+        // Real dimensioned rectangle from actual survey data
+        const geo = getRunway0826Geometry();
+        const halfWidthPx = metersToPx(RWY_0826_DATA.widthM) / 2;
 
-    ctx.beginPath();
-    ctx.moveTo(p1.x,p1.y);
-    ctx.lineTo(p2.x,p2.y);
-    ctx.stroke();
+        const corners = [
 
-    ctx.fillStyle = "#FFFFFF";
-    ctx.font = "16px Arial";
+            {x: geo.pavementStart08.x + geo.perp.x*halfWidthPx,
+             y: geo.pavementStart08.y + geo.perp.y*halfWidthPx},
 
-    ctx.fillText(rwy.label1,p1.x-22,p1.y+8);
-    ctx.fillText(rwy.label2,p2.x+8,p2.y+8);
+            {x: geo.pavementEnd26.x + geo.perp.x*halfWidthPx,
+             y: geo.pavementEnd26.y + geo.perp.y*halfWidthPx},
+
+            {x: geo.pavementEnd26.x - geo.perp.x*halfWidthPx,
+             y: geo.pavementEnd26.y - geo.perp.y*halfWidthPx},
+
+            {x: geo.pavementStart08.x - geo.perp.x*halfWidthPx,
+             y: geo.pavementStart08.y - geo.perp.y*halfWidthPx}
+
+        ];
+
+        ctx.fillStyle = "#FFFFFF";
+        ctx.beginPath();
+        ctx.moveTo(corners[0].x, corners[0].y);
+        corners.slice(1).forEach(c => ctx.lineTo(c.x, c.y));
+        ctx.closePath();
+        ctx.fill();
+
+        // Displaced threshold tick marks
+        [geo.touchdown08, geo.touchdown26].forEach(td=>{
+
+            const tPx = metersToPx(15);
+
+            ctx.strokeStyle = "#FF0000";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(td.x + geo.perp.x*tPx, td.y + geo.perp.y*tPx);
+            ctx.lineTo(td.x - geo.perp.x*tPx, td.y - geo.perp.y*tPx);
+            ctx.stroke();
+
+        });
+
+        ctx.fillStyle = "#FFFFFF";
+        ctx.font = "16px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("08", geo.pavementStart08.x, geo.pavementStart08.y - 12);
+        ctx.fillText("26", geo.pavementEnd26.x, geo.pavementEnd26.y - 12);
+        ctx.textAlign = "left";
+
+    }
+    else{
+
+        // No survey data yet for 15/33 - simplified line
+        const p1 = bearingToXY(rwy.bearing1,10);
+        const p2 = bearingToXY(rwy.bearing2,10);
+
+        ctx.strokeStyle = "#FFFFFF";
+        ctx.lineWidth = 4;
+
+        ctx.beginPath();
+        ctx.moveTo(p1.x,p1.y);
+        ctx.lineTo(p2.x,p2.y);
+        ctx.stroke();
+
+        ctx.fillStyle = "#FFFFFF";
+        ctx.font = "16px Arial";
+
+        ctx.fillText(rwy.label1,p1.x-22,p1.y+8);
+        ctx.fillText(rwy.label2,p2.x+8,p2.y+8);
+
+    }
 
 }
 
 // ======================================
-// Draw Extended Runway Centreline
+// Extended Approach Centreline with tick
+// marks, anchored to the true touchdown
+// point (not CCB) for the active runway.
+// Every 1 NM out to 15 NM: 0.5 NM tick
+// each side; at 5/10/15 NM: 1 NM each side.
 // ======================================
 
 function drawCentreline(){
 
-    const rwy = getActiveRunway();
+    const touchdown = getTouchdownPoint(activeRunwayDirection);
+    const approachBearing = getApproachBearing(activeRunwayDirection);
 
-    const start = bearingToXY(rwy.bearing1,15);
-    const end   = bearingToXY(rwy.bearing2,15);
+    const angle = (approachBearing - 90) * Math.PI / 180;
+    const dir = {x:Math.cos(angle), y:Math.sin(angle)};
+    const perp = {x:-dir.y, y:dir.x};
 
     ctx.save();
 
-    ctx.strokeStyle="#FFAA00";
-    ctx.lineWidth=2;
+    ctx.strokeStyle = "#FFAA00";
+    ctx.lineWidth = 2;
     ctx.setLineDash([10,6]);
 
+    const end15 = {
+        x: touchdown.x + dir.x*nm(15),
+        y: touchdown.y + dir.y*nm(15)
+    };
+
     ctx.beginPath();
-    ctx.moveTo(start.x,start.y);
-    ctx.lineTo(end.x,end.y);
+    ctx.moveTo(touchdown.x, touchdown.y);
+    ctx.lineTo(end15.x, end15.y);
     ctx.stroke();
 
+    ctx.setLineDash([]);
+    ctx.lineWidth = 1.5;
+
+    for(let d=1; d<=15; d++){
+
+        const center = {
+            x: touchdown.x + dir.x*nm(d),
+            y: touchdown.y + dir.y*nm(d)
+        };
+
+        const half = (d % 5 === 0) ? nm(1) : nm(0.5);
+
+        const p1 = {x:center.x + perp.x*half, y:center.y + perp.y*half};
+        const p2 = {x:center.x - perp.x*half, y:center.y - perp.y*half};
+
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+
+        ctx.fillStyle = "#FFAA00";
+        ctx.font = "11px Consolas";
+        ctx.textAlign = "center";
+        ctx.fillText(d + "NM", center.x, center.y - half - 4);
+
+    }
+
+    ctx.textAlign = "left";
     ctx.restore();
 
 }
@@ -330,8 +528,33 @@ function drawTrafficCircuit(){
 
     const rwy = getActiveRunway();
 
-    const end1 = bearingToXY(rwy.bearing1,12);
-    const end2 = bearingToXY(rwy.bearing2,12);
+    let end1, end2;
+
+    if(activeRunway === "0826"){
+
+        // Anchor to the real pavement ends (extended 2NM beyond
+        // each end, same idea as the old bearingToXY(...,12))
+        const geo = getRunway0826Geometry();
+        const ext = metersToPx(2 * 1852);
+
+        end1 = {
+            x: geo.pavementStart08.x - geo.along.x*ext,
+            y: geo.pavementStart08.y - geo.along.y*ext
+        };
+
+        end2 = {
+            x: geo.pavementEnd26.x + geo.along.x*ext,
+            y: geo.pavementEnd26.y + geo.along.y*ext
+        };
+
+    }
+    else{
+
+        end1 = bearingToXY(rwy.bearing1,12);
+        end2 = bearingToXY(rwy.bearing2,12);
+
+    }
+
     const dx = end2.x - end1.x;
     const dy = end2.y - end1.y;
     const len = Math.sqrt(dx*dx + dy*dy);
