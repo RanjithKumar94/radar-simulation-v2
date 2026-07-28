@@ -29,8 +29,8 @@ const CCB = {
 // Colours
 const BG_COLOR = "#000000";
 const RING_COLOR = "#333333";
-const ROUTE_COLOR = "#FFFFFF";
-const TEXT_COLOR = "#FFFFFF";
+const ROUTE_COLOR = "#555555";
+const TEXT_COLOR = "#999999";
 const AIRCRAFT_COLOR = "#00FF00";
 const AIRCRAFT_SELECTED_COLOR = "#FFFF00";
 
@@ -162,7 +162,7 @@ function getNDB(name){
 const NDB_ROUTES = [
 
     {name:"W-20", from:"PJ", track:160, length:30},
-    {name:"109 TR PJ", from:"PJ", track:109, length:50}
+    {name:"109 TR PJ", from:"PJ", track:109, length:30}
 
 ];
 
@@ -207,9 +207,10 @@ function drawBackground(){
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
     ctx.strokeStyle = RING_COLOR;
-    ctx.lineWidth = 1;
 
     for(let i=10;i<=60;i+=10){
+
+        ctx.lineWidth = (i === 30) ? 2.5 : 1;
 
         ctx.beginPath();
 
@@ -245,12 +246,19 @@ const RUNWAYS = {
 
 // Default active runway
 let activeRunway = "0826";
+let activeRunwayDirection = "26";   // exact selection: "08","26","15","33"
+
+// Display range filter (NM) - does NOT rescale the map,
+// just hides aircraft further than this from CCB
+let displayRange = 60;
 
 function getActiveRunway(){
     return RUNWAYS[activeRunway];
 }
 
 function setActiveRunwayFromSelect(value){
+
+    activeRunwayDirection = value;
 
     if(value === "08" || value === "26"){
         activeRunway = "0826";
@@ -706,7 +714,23 @@ function drawAircraft(){
 
     const activeList =
     [...aircraft, ...(typeof departures !== "undefined" ? departures : [])]
-    .filter(ac => ac.active);
+    .filter(ac=>{
+
+        if(!ac.active) return false;
+
+        if(typeof displayRange !== "undefined"){
+
+            const dx = ac.x - CCB.x;
+            const dy = ac.y - CCB.y;
+            const distNM = Math.sqrt(dx*dx + dy*dy) / PIXELS_PER_NM;
+
+            if(distNM > displayRange) return false;
+
+        }
+
+        return true;
+
+    });
 
 
     // =====================================
@@ -828,17 +852,17 @@ function drawAircraft(){
 
 
         // =====================================
-        // History trail (last 3 seconds)
+        // History trail (last 4 positions)
         // =====================================
 
         if(ac.trail && ac.trail.length){
 
             ac.trail.forEach((pt,i)=>{
 
-                const fade = (i+1) / (ac.trail.length+1);
+                const fade = 0.35 + (0.55 * (i+1) / ac.trail.length);
 
                 ctx.beginPath();
-                ctx.arc(pt.x, pt.y, 2.5, 0, Math.PI*2);
+                ctx.arc(pt.x, pt.y, 3, 0, Math.PI*2);
                 ctx.fillStyle = isSelected
                 ? `rgba(255,255,0,${fade})`
                 : `rgba(0,255,0,${fade})`;
@@ -932,7 +956,8 @@ function drawAircraft(){
 
 
         // =====================================
-        // Level
+        // Row 2: actual level, target level,
+        // climb/descend rate (hundreds of ft/min)
         // =====================================
 
         const currentFL =
@@ -941,31 +966,23 @@ function drawAircraft(){
         const assignedFL =
         Math.round(ac.targetLevel);
 
+        let rateText = "";
 
-        let levelText;
+        if(ac.verticalSpeed > 0){
 
-
-        if(currentFL < assignedFL){
-
-            levelText =
-            "FL" + currentFL +
-            " ↑ FL" + assignedFL;
+            rateText =
+            " ↑" + Math.round(Math.abs(ac.verticalSpeed)/100);
 
         }
-        else if(currentFL > assignedFL){
+        else if(ac.verticalSpeed < 0){
 
-            levelText =
-            "FL" + currentFL +
-            " ↓ FL" + assignedFL;
-
-        }
-        else{
-
-            levelText =
-            "FL" + currentFL;
+            rateText =
+            " ↓" + Math.round(Math.abs(ac.verticalSpeed)/100);
 
         }
 
+        const levelText =
+        "FL" + currentFL + " FL" + assignedFL + rateText;
 
         ctx.fillText(
             levelText,
@@ -976,35 +993,17 @@ function drawAircraft(){
 
 
         // =====================================
-        // Vertical speed
+        // Row 3: speed
         // =====================================
 
-        if(ac.verticalSpeed !== 0){
+        const speedText =
+        Math.round(ac.speed) + "KT";
 
-            let vsText;
-
-
-            if(ac.verticalSpeed > 0){
-
-                vsText =
-                "↑" + ac.verticalSpeed;
-
-            }
-            else{
-
-                vsText =
-                "↓" + Math.abs(ac.verticalSpeed);
-
-            }
-
-
-            ctx.fillText(
-                vsText,
-                labelX,
-                ly + 20
-            );
-
-        }
+        ctx.fillText(
+            speedText,
+            labelX,
+            ly + 20
+        );
 
 
 
@@ -1059,6 +1058,18 @@ window.onload = function(){
 
         rwySelect.onchange = function(){
             setActiveRunwayFromSelect(this.value);
+        };
+
+    }
+
+    const rangeSelect = document.getElementById("rangeSelect");
+
+    if(rangeSelect){
+
+        displayRange = Number(rangeSelect.value);
+
+        rangeSelect.onchange = function(){
+            displayRange = Number(this.value);
         };
 
     }
@@ -1198,6 +1209,8 @@ console.log(
             document.getElementById("callsign").value = ac.callsign;
             document.getElementById("heading").value = ac.targetHeading;
             document.getElementById("level").value = ac.targetLevel;
+            document.getElementById("speedInput").value =
+            (ac.targetSpeed !== undefined ? ac.targetSpeed : ac.speed);
 
             // Turn direction
             const turn = document.querySelector(
