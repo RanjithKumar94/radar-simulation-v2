@@ -98,7 +98,9 @@ document.getElementById("applyBtn").onclick = function(){
 
     const hdg = document.getElementById("heading").value;
     const lvl = document.getElementById("level").value;
-    const spd = document.getElementById("speedInput").value;
+
+    const spdEl = document.getElementById("speedInput");
+    const spd = spdEl ? spdEl.value : "";
 
     if(hdg !== "")
         selectedAircraft.targetHeading = parseInt(hdg);
