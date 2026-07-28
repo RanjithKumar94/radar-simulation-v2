@@ -175,27 +175,46 @@ if(ac.heading !== ac.targetHeading){
 
     const turnRate = 3;
 
-    let diff =
-    (ac.targetHeading - ac.heading + 360) % 360;
-
-
-
     if(ac.turnDirection === "LEFT"){
 
-        ac.heading -= turnRate;
+        let diffLeft =
+        (ac.heading - ac.targetHeading + 360) % 360;
 
-        if(ac.heading < 0)
-            ac.heading += 360;
+        if(diffLeft <= turnRate){
+
+            ac.heading = ac.targetHeading;
+
+        }
+        else{
+
+            ac.heading -= turnRate;
+
+            if(ac.heading < 0)
+                ac.heading += 360;
+
+        }
 
     }
 
 
     else if(ac.turnDirection === "RIGHT"){
 
-        ac.heading += turnRate;
+        let diffRight =
+        (ac.targetHeading - ac.heading + 360) % 360;
 
-        if(ac.heading >= 360)
-            ac.heading -= 360;
+        if(diffRight <= turnRate){
+
+            ac.heading = ac.targetHeading;
+
+        }
+        else{
+
+            ac.heading += turnRate;
+
+            if(ac.heading >= 360)
+                ac.heading -= 360;
+
+        }
 
     }
 
@@ -203,6 +222,9 @@ if(ac.heading !== ac.targetHeading){
     else{
 
         // SHORTEST TURN
+
+        let diff =
+        (ac.targetHeading - ac.heading + 360) % 360;
 
         if(diff > 180)
             diff -= 360;
@@ -291,11 +313,12 @@ if(ac.heading !== ac.targetHeading){
 
         if(ac.level < ac.targetLevel){
 
+            const climbFpm = ac.climbRateFpm || 1500;
 
-            ac.level += 0.25;
+            ac.level += climbFpm / 100 / 60;
 
 
-            ac.verticalSpeed = 1500;
+            ac.verticalSpeed = climbFpm;
 
 
 
