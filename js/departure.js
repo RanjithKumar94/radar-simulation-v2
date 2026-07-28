@@ -234,6 +234,14 @@ if(ac.heading !== ac.targetHeading){
 
         // 5 NM per minute
 
+        if(!ac.trail) ac.trail = [];
+
+        ac.trail.push({x:ac.x, y:ac.y});
+
+        if(ac.trail.length > 3){
+            ac.trail.shift();
+        }
+
         const movement = 5 / 60;
 
 
