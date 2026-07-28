@@ -102,6 +102,12 @@ document.getElementById("applyBtn").onclick = function(){
     const spdEl = document.getElementById("speedInput");
     const spd = spdEl ? spdEl.value : "";
 
+    const climbEl = document.getElementById("climbRateInput");
+    const climbRate = climbEl ? climbEl.value : "";
+
+    const descentEl = document.getElementById("descentRateInput");
+    const descentRate = descentEl ? descentEl.value : "";
+
     if(hdg !== "")
         selectedAircraft.targetHeading = parseInt(hdg);
 
@@ -110,6 +116,12 @@ document.getElementById("applyBtn").onclick = function(){
 
     if(spd !== "")
         selectedAircraft.targetSpeed = parseInt(spd);
+
+    if(climbRate !== "")
+        selectedAircraft.climbRateFpm = parseInt(climbRate);
+
+    if(descentRate !== "")
+        selectedAircraft.descentRateFpm = parseInt(descentRate);
     const turn =
 document.querySelector('input[name="turnDir"]:checked').value;
 
@@ -288,28 +300,48 @@ if(ac.heading !== ac.targetHeading){
 
     const turnRate = 3;
 
-    let diff =
-    (ac.targetHeading - ac.heading + 360) % 360;
-
-
-
-
     if(ac.turnDirection === "LEFT"){
 
-        ac.heading -= turnRate;
+        // Counter-clockwise distance remaining to target
+        let diffLeft =
+        (ac.heading - ac.targetHeading + 360) % 360;
 
-        if(ac.heading < 0)
-            ac.heading += 360;
+        if(diffLeft <= turnRate){
+
+            ac.heading = ac.targetHeading;
+
+        }
+        else{
+
+            ac.heading -= turnRate;
+
+            if(ac.heading < 0)
+                ac.heading += 360;
+
+        }
 
     }
 
 
     else if(ac.turnDirection === "RIGHT"){
 
-        ac.heading += turnRate;
+        // Clockwise distance remaining to target
+        let diffRight =
+        (ac.targetHeading - ac.heading + 360) % 360;
 
-        if(ac.heading >= 360)
-            ac.heading -= 360;
+        if(diffRight <= turnRate){
+
+            ac.heading = ac.targetHeading;
+
+        }
+        else{
+
+            ac.heading += turnRate;
+
+            if(ac.heading >= 360)
+                ac.heading -= 360;
+
+        }
 
     }
 
@@ -317,6 +349,9 @@ if(ac.heading !== ac.targetHeading){
     else{
 
         // SHORTEST TURN
+
+        let diff =
+        (ac.targetHeading - ac.heading + 360) % 360;
 
         if(diff > 180)
             diff -= 360;
@@ -366,11 +401,12 @@ if(ac.distance <= 8.5){
 
 if(ac.level > ac.targetLevel){
 
-    const descentRate = 0.25;   // FL/sec (~1500 ft/min)
+    const descentFpm = ac.descentRateFpm || 1500;
+    const descentRate = descentFpm / 100 / 60;   // FL/sec
 
     ac.level -= descentRate;
 
-    ac.verticalSpeed = -1500;
+    ac.verticalSpeed = -descentFpm;
 
 
     if(ac.level <= ac.targetLevel){
@@ -386,11 +422,12 @@ if(ac.level > ac.targetLevel){
 
 else if(ac.level < ac.targetLevel){
 
-    const climbRate = 0.25;
+    const climbFpm = ac.climbRateFpm || 1500;
+    const climbRate = climbFpm / 100 / 60;   // FL/sec
 
     ac.level += climbRate;
 
-    ac.verticalSpeed = 1500;
+    ac.verticalSpeed = climbFpm;
 
 
     if(ac.level >= ac.targetLevel){
