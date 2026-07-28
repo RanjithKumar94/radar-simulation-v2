@@ -100,6 +100,8 @@ function createDeparture(runway){
 
         speed:250,
 
+        targetSpeed:250,
+
 
         active:true
 
@@ -238,11 +240,35 @@ if(ac.heading !== ac.targetHeading){
 
         ac.trail.push({x:ac.x, y:ac.y});
 
-        if(ac.trail.length > 3){
+        if(ac.trail.length > 4){
             ac.trail.shift();
         }
 
-        const movement = 5 / 60;
+        // ===============================
+        // Speed transition toward target speed
+        // ===============================
+
+        if(ac.speed < ac.targetSpeed){
+
+            ac.speed += 5;
+
+            if(ac.speed > ac.targetSpeed){
+                ac.speed = ac.targetSpeed;
+            }
+
+        }
+        else if(ac.speed > ac.targetSpeed){
+
+            ac.speed -= 5;
+
+            if(ac.speed < ac.targetSpeed){
+                ac.speed = ac.targetSpeed;
+            }
+
+        }
+
+        // Movement (NM/sec) derived from current speed
+        const movement = ac.speed / 3600;
 
 
         const pixels =
