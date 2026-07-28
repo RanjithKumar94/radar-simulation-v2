@@ -74,6 +74,11 @@ function entryOffset(type) {
     }
 
 }
+let activeRunway = "08";
+
+document.getElementById("runwaySelect").addEventListener("change", e => {
+    activeRunway = e.target.value;
+});
 document.getElementById("applyBtn").onclick = function(){
 
     if(selectedAircraft == null){
