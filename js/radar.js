@@ -29,8 +29,8 @@ const CCB = {
 // Colours
 const BG_COLOR = "#000000";
 const RING_COLOR = "#333333";
-const ROUTE_COLOR = "#FF0000";
-const TEXT_COLOR = "#FF0000";
+const ROUTE_COLOR = "#FFFFFF";
+const TEXT_COLOR = "#FFFFFF";
 const AIRCRAFT_COLOR = "#00FF00";
 const AIRCRAFT_SELECTED_COLOR = "#FFFF00";
 
@@ -47,6 +47,84 @@ const ROUTES = [
     {name:"088-R/CCB", bearing:88}
 
 ];
+
+// ======================================
+// Named Fixes (reporting points at 50 NM,
+// one at the end of each CCB route)
+// ======================================
+
+const FIXES = [
+
+    {name:"ELBIS", bearing:190, distance:50},
+    {name:"ANKIT", bearing:252, distance:50},
+    {name:"SULEM", bearing:300, distance:50},
+    {name:"MANUR", bearing:270, distance:50},
+    {name:"BAMUL", bearing:350, distance:50},
+    {name:"MANDU", bearing:70,  distance:50},
+    {name:"DUMAS", bearing:120, distance:50}
+
+];
+
+function drawFixes(){
+
+    FIXES.forEach(fix=>{
+
+        const p = bearingToXY(fix.bearing, fix.distance);
+
+        // Triangle marker (standard reporting-point symbol)
+
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y - 6);
+        ctx.lineTo(p.x - 5, p.y + 4);
+        ctx.lineTo(p.x + 5, p.y + 4);
+        ctx.closePath();
+
+        ctx.strokeStyle = TEXT_COLOR;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        ctx.fillStyle = TEXT_COLOR;
+        ctx.font = "13px Consolas";
+        ctx.textAlign = "left";
+
+        ctx.fillText(fix.name, p.x + 8, p.y + 4);
+
+    });
+
+}
+
+// ======================================
+// Extra unnamed route: DUMAS to the
+// 088-R/CCB route at 20 NM from CCB
+// ======================================
+
+const EXTRA_ROUTES = [
+
+    {
+        from:{bearing:120, distance:50},   // DUMAS
+        to:{bearing:88, distance:20}
+    }
+
+];
+
+function drawExtraRoutes(){
+
+    ctx.strokeStyle = ROUTE_COLOR;
+    ctx.lineWidth = 2;
+
+    EXTRA_ROUTES.forEach(r=>{
+
+        const start = bearingToXY(r.from.bearing, r.from.distance);
+        const end   = bearingToXY(r.to.bearing, r.to.distance);
+
+        ctx.beginPath();
+        ctx.moveTo(start.x, start.y);
+        ctx.lineTo(end.x, end.y);
+        ctx.stroke();
+
+    });
+
+}
 
 // ======================================
 // NDBs (defined by radial/distance from CCB)
@@ -154,13 +232,13 @@ function drawBackground(){
 const RUNWAYS = {
 
     "0826": {
-        bearing1:260, label1:"26",
-        bearing2:80,  label2:"08"
+        bearing1:260, label1:"08",
+        bearing2:80,  label2:"26"
     },
 
     "1533": {
-        bearing1:335, label1:"33",
-        bearing2:155, label2:"15"
+        bearing1:335, label1:"15",
+        bearing2:155, label2:"33"
     }
 
 };
@@ -275,10 +353,8 @@ function drawTrafficCircuit(){
         y:end2.y - py*offset
     };
 
-    ctx.strokeStyle="#FF0000";
+    ctx.strokeStyle="#FFFFFF";
     ctx.lineWidth=2;
-
-    // Upper box
     ctx.beginPath();
     ctx.moveTo(end1.x,end1.y);
     ctx.lineTo(top1.x,top1.y);
@@ -332,17 +408,6 @@ function drawRoutes(){
         ctx.lineTo(end.x,end.y);
         ctx.stroke();
 
-        const label = bearingToXY(route.bearing,56);
-
-        ctx.fillStyle = TEXT_COLOR;
-        ctx.font = "15px Consolas";
-
-        ctx.fillText(
-            route.name,
-            label.x-15,
-            label.y
-        );
-
     });
 
 }
@@ -365,16 +430,6 @@ function drawNDBs(){
         ctx.fillRect(-4, -4, 8, 8);
 
         ctx.restore();
-
-        ctx.font = "15px Consolas";
-        ctx.fillStyle = "#FFAA00";
-        ctx.textAlign = "left";
-
-        ctx.fillText(
-            (ndb.fullName || ndb.name) + " " + ndb.name,
-            ndb.x + 8,
-            ndb.y - 8
-        );
 
     });
 
@@ -409,22 +464,6 @@ function drawNDBRoutes(){
         ctx.lineTo(end.x, end.y);
         ctx.stroke();
 
-        const label = pointFromXY(
-            {x:origin.x, y:origin.y},
-            route.track,
-            route.length - 4
-        );
-
-        ctx.fillStyle = TEXT_COLOR;
-        ctx.font = "15px Consolas";
-        ctx.textAlign = "left";
-
-        ctx.fillText(
-            route.name,
-            label.x - 15,
-            label.y
-        );
-
     });
 
 }
@@ -439,11 +478,11 @@ function drawNDBRoutes(){
 
 const VAD99 = [
 
-    {bearing:110, distance:15},
-    {bearing:135, distance:26},
-    {bearing:150, distance:22},
-    {bearing:145, distance:17},
-    {bearing:120, distance:15}
+    {bearing:125, distance:14},   // A
+    {bearing:117, distance:19},   // B
+    {bearing:137, distance:25},   // C
+    {bearing:145, distance:23},   // D
+    {bearing:140, distance:14}    // E
 
 ];
 
@@ -477,7 +516,7 @@ function drawVAD99(){
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    const labelPt = bearingToXY(130, 20);
+    const labelPt = bearingToXY(130, 19);
 
     ctx.fillStyle = "#FF0000";
     ctx.font = "13px Consolas";
@@ -491,12 +530,14 @@ function drawVAD99(){
 }
 
 // ======================================
-// Range / Bearing Line (RBL) between aircraft
+// Range / Bearing Line (RBL)
+// Works between: aircraft-aircraft,
+// aircraft-point, or point-point
 // ======================================
 
 let rbls = [];
 let rblMode = false;
-let rblFirstAircraft = null;
+let rblFirstPoint = null;
 
 function updateRblStatus(text){
 
@@ -505,6 +546,22 @@ function updateRblStatus(text){
     if(el){
         el.textContent = text;
     }
+
+}
+
+// Resolve a stored RBL endpoint to its current x/y.
+// Returns null if it referenced an aircraft that's no longer active.
+function resolveRblPoint(pt, activeList){
+
+    if(pt.ac){
+
+        if(!activeList.includes(pt.ac)) return null;
+
+        return {x:pt.ac.x, y:pt.ac.y};
+
+    }
+
+    return {x:pt.x, y:pt.y};
 
 }
 
@@ -517,10 +574,13 @@ function drawRBLs(){
 
     rbls.forEach(rbl=>{
 
-        if(!activeList.includes(rbl.a) || !activeList.includes(rbl.b)) return;
+        const a = resolveRblPoint(rbl.a, activeList);
+        const b = resolveRblPoint(rbl.b, activeList);
 
-        const ax = rbl.a.x, ay = rbl.a.y;
-        const bx = rbl.b.x, by = rbl.b.y;
+        if(!a || !b) return;
+
+        const ax = a.x, ay = a.y;
+        const bx = b.x, by = b.y;
 
         const dx = bx - ax;
         const dy = by - ay;
@@ -654,7 +714,7 @@ function drawAircraft(){
     // then repel overlapping labels apart
     // =====================================
 
-    const LABEL_W = 95;
+    const LABEL_W = 100;
     const LABEL_H = 46;
 
     const labels = activeList.map(ac=>{
@@ -665,20 +725,25 @@ function drawAircraft(){
         const bx = ac.x + Math.cos(angle) * leaderLength;
         const by = ac.y + Math.sin(angle) * leaderLength;
 
+        // Text is drawn to the right of the pivot if cos(angle)>=0,
+        // to the left otherwise - so the collision box must sit on
+        // that same side, not centered on the pivot.
+        const dir = Math.cos(angle) >= 0 ? 1 : -1;
+
         if(!ac.labelOffset){
             ac.labelOffset = {x:0, y:0};
         }
 
         return {
             ac,
-            bx, by,
+            bx, by, dir,
             ox: ac.labelOffset.x,
             oy: ac.labelOffset.y
         };
 
     });
 
-    for(let pass=0; pass<4; pass++){
+    for(let pass=0; pass<8; pass++){
 
         for(let i=0; i<labels.length; i++){
 
@@ -687,10 +752,13 @@ function drawAircraft(){
                 const a = labels[i];
                 const b = labels[j];
 
-                const ax = a.bx + a.ox;
-                const ay = a.by + a.oy;
-                const cx = b.bx + b.ox;
-                const cy = b.by + b.oy;
+                // Box centre = pivot + offset, shifted toward the
+                // side the text actually renders on, plus a bit
+                // for the vertical spread of the 3 text lines.
+                const ax = a.bx + a.ox + a.dir * (LABEL_W/2);
+                const ay = a.by + a.oy + 6;
+                const cx = b.bx + b.ox + b.dir * (LABEL_W/2);
+                const cy = b.by + b.oy + 6;
 
                 const dx = cx - ax;
                 const dy = cy - ay;
@@ -703,14 +771,14 @@ function drawAircraft(){
                     // Push apart along the axis with LESS overlap
                     if(overlapX < overlapY){
 
-                        const push = (overlapX / 2) * (dx >= 0 ? 1 : -1);
+                        const push = (overlapX / 2 + 1) * (dx >= 0 ? 1 : -1);
                         a.ox -= push;
                         b.ox += push;
 
                     }
                     else{
 
-                        const push = (overlapY / 2) * (dy >= 0 ? 1 : -1);
+                        const push = (overlapY / 2 + 1) * (dy >= 0 ? 1 : -1);
                         a.oy -= push;
                         b.oy += push;
 
@@ -725,10 +793,14 @@ function drawAircraft(){
     }
 
     // Persist (with light smoothing so labels glide, not jump)
+    // and clamp so a label can't drift off arbitrarily far.
     labels.forEach(l=>{
 
-        l.ac.labelOffset.x += (l.ox - l.ac.labelOffset.x) * 0.4;
-        l.ac.labelOffset.y += (l.oy - l.ac.labelOffset.y) * 0.4;
+        l.ac.labelOffset.x += (l.ox - l.ac.labelOffset.x) * 0.5;
+        l.ac.labelOffset.y += (l.oy - l.ac.labelOffset.y) * 0.5;
+
+        l.ac.labelOffset.x = Math.max(-70, Math.min(70, l.ac.labelOffset.x));
+        l.ac.labelOffset.y = Math.max(-70, Math.min(70, l.ac.labelOffset.y));
 
     });
 
@@ -953,6 +1025,7 @@ function drawRadar(){
 
     drawBackground();
     drawRoutes();
+    drawExtraRoutes();
     drawNDBRoutes();
     drawVAD99();
     drawRunway();
@@ -960,6 +1033,7 @@ function drawRadar(){
     drawCentreline();
     drawCCB();
     drawNDBs();
+    drawFixes();
 
     drawUnknownBlips();
     drawAircraft();
@@ -997,14 +1071,14 @@ window.onload = function(){
         rblBtn.onclick = function(){
 
             rblMode = !rblMode;
-            rblFirstAircraft = null;
+            rblFirstPoint = null;
 
             rblBtn.style.background = rblMode ? "#007700" : "";
-            rblBtn.textContent = rblMode ? "RBL: ON (click 2 A/C)" : "DRAW RBL";
+            rblBtn.textContent = rblMode ? "RBL: ON (click 2 pts)" : "DRAW RBL";
 
             updateRblStatus(
                 rblMode
-                ? "RBL mode ON — click an aircraft dot"
+                ? "RBL mode ON — click an aircraft or any point"
                 : "RBL mode off"
             );
 
@@ -1019,8 +1093,8 @@ window.onload = function(){
         clearRblBtn.onclick = function(){
 
             rbls = [];
-            rblFirstAircraft = null;
-            updateRblStatus(rblMode ? "RBL mode ON — click an aircraft dot" : "");
+            rblFirstPoint = null;
+            updateRblStatus(rblMode ? "RBL mode ON — click an aircraft or any point" : "");
 
         };
 
@@ -1048,7 +1122,8 @@ canvas.addEventListener("click", function(e){
     const my = e.clientY - rect.top;
 
     // =====================================
-    // RBL mode: click two aircraft blips
+    // RBL mode: click aircraft OR any point,
+    // on either end, in any combination
     // =====================================
 
     if(rblMode){
@@ -1057,34 +1132,34 @@ canvas.addEventListener("click", function(e){
         [...aircraft, ...(typeof departures !== "undefined" ? departures : [])]
         .filter(ac => ac.active);
 
-        const hit = activeList.find(ac=>{
+        const hitAircraft = activeList.find(ac=>{
             const dx = mx - ac.x;
             const dy = my - ac.y;
             return Math.sqrt(dx*dx+dy*dy) <= 18;
         });
 
-        if(hit){
+        // Either the aircraft we clicked, or the raw point clicked
+        const clickedPoint = hitAircraft
+        ? {ac: hitAircraft}
+        : {x: mx, y: my};
 
-            if(!rblFirstAircraft){
+        const clickedLabel = hitAircraft
+        ? hitAircraft.callsign
+        : "point (" + Math.round(mx) + "," + Math.round(my) + ")";
 
-                rblFirstAircraft = hit;
-                console.log("RBL: first aircraft =", hit.callsign);
-                updateRblStatus("RBL: " + hit.callsign + " selected — click a second aircraft");
+        if(!rblFirstPoint){
 
-            }
-            else if(hit !== rblFirstAircraft){
-
-                rbls.push({a:rblFirstAircraft, b:hit});
-                console.log("RBL drawn:", rblFirstAircraft.callsign, "-", hit.callsign);
-                updateRblStatus("RBL drawn: " + rblFirstAircraft.callsign + " – " + hit.callsign);
-                rblFirstAircraft = null;
-
-            }
+            rblFirstPoint = clickedPoint;
+            console.log("RBL: first point =", clickedLabel);
+            updateRblStatus("RBL: " + clickedLabel + " selected — click a second aircraft or point");
 
         }
         else{
 
-            updateRblStatus("RBL mode ON — click an aircraft dot");
+            rbls.push({a:rblFirstPoint, b:clickedPoint});
+            console.log("RBL drawn:", clickedLabel);
+            updateRblStatus("RBL drawn to " + clickedLabel);
+            rblFirstPoint = null;
 
         }
 
