@@ -1018,9 +1018,37 @@ function drawAircraft(){
 // Draw Complete Radar
 // ======================================
 
+function getZoomFactor(){
+    return 60 / displayRange;
+}
+
+// Convert a raw canvas click (screen space) into the same
+// world-space coordinates aircraft x/y are stored in,
+// undoing the zoom transform used for rendering.
+function screenToWorld(mx, my){
+
+    const zoom = getZoomFactor();
+
+    return {
+        x: CCB.x + (mx - CCB.x) / zoom,
+        y: CCB.y + (my - CCB.y) / zoom
+    };
+
+}
+
 function drawRadar(){
 
     ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    const zoom = getZoomFactor();
+
+    ctx.save();
+
+    // Zoom around CCB - underlying aircraft x/y never change,
+    // only how they're rendered on screen changes.
+    ctx.translate(CCB.x, CCB.y);
+    ctx.scale(zoom, zoom);
+    ctx.translate(-CCB.x, -CCB.y);
 
     drawBackground();
     drawRoutes();
@@ -1037,6 +1065,8 @@ function drawRadar(){
     drawUnknownBlips();
     drawAircraft();
     drawRBLs();
+
+    ctx.restore();
 
     requestAnimationFrame(drawRadar);
 
@@ -1139,24 +1169,26 @@ canvas.addEventListener("click", function(e){
 
     if(rblMode){
 
+        const world = screenToWorld(mx, my);
+
         const activeList =
         [...aircraft, ...(typeof departures !== "undefined" ? departures : [])]
         .filter(ac => ac.active);
 
         const hitAircraft = activeList.find(ac=>{
-            const dx = mx - ac.x;
-            const dy = my - ac.y;
-            return Math.sqrt(dx*dx+dy*dy) <= 18;
+            const dx = world.x - ac.x;
+            const dy = world.y - ac.y;
+            return Math.sqrt(dx*dx+dy*dy) <= 18 / getZoomFactor();
         });
 
         // Either the aircraft we clicked, or the raw point clicked
         const clickedPoint = hitAircraft
         ? {ac: hitAircraft}
-        : {x: mx, y: my};
+        : {x: world.x, y: world.y};
 
         const clickedLabel = hitAircraft
         ? hitAircraft.callsign
-        : "point (" + Math.round(mx) + "," + Math.round(my) + ")";
+        : "point (" + Math.round(world.x) + "," + Math.round(world.y) + ")";
 
         if(!rblFirstPoint){
 
@@ -1178,6 +1210,8 @@ canvas.addEventListener("click", function(e){
 
     }
 
+const world = screenToWorld(mx, my);
+
 [...aircraft, ...(typeof departures !== "undefined" ? departures : [])].forEach(ac=>{
         if(!ac.active) return;
 
@@ -1189,10 +1223,10 @@ canvas.addEventListener("click", function(e){
 
         // Label hit box
         if(
-            mx >= lx &&
-            mx <= lx + 100 &&
-            my >= ly - 20 &&
-            my <= ly + 35
+            world.x >= lx &&
+            world.x <= lx + 100 &&
+            world.y >= ly - 20 &&
+            world.y <= ly + 35
         ){
 console.log(
     "Clicked aircraft:",
@@ -1215,6 +1249,18 @@ console.log(
             if(speedEl){
                 speedEl.value =
                 (ac.targetSpeed !== undefined ? ac.targetSpeed : ac.speed);
+            }
+
+            const climbEl = document.getElementById("climbRateInput");
+
+            if(climbEl){
+                climbEl.value = ac.climbRateFpm || 1500;
+            }
+
+            const descentEl = document.getElementById("descentRateInput");
+
+            if(descentEl){
+                descentEl.value = ac.descentRateFpm || 1500;
             }
 
             // Turn direction
