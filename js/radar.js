@@ -662,7 +662,7 @@ function drawNDBRoutes(){
 
 const VAD99 = [
 
-    {bearing:125, distance:14},   // A
+    {bearing:128, distance:14},   // A
     {bearing:117, distance:19},   // B
     {bearing:137, distance:25},   // C
     {bearing:145, distance:23},   // D
