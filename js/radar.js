@@ -27,12 +27,12 @@ const CCB = {
 };
 
 // Colours
-const BG_COLOR = "#FFFFFF";
-const RING_COLOR = "#888888";
-const ROUTE_COLOR = "#000000";
-const TEXT_COLOR = "#000000";
-const AIRCRAFT_COLOR = "#00CC00";
-const AIRCRAFT_SELECTED_COLOR = "#FFD700";
+const BG_COLOR = "#000000";
+const RING_COLOR = "#333333";
+const ROUTE_COLOR = "#FF0000";
+const TEXT_COLOR = "#FF0000";
+const AIRCRAFT_COLOR = "#00FF00";
+const AIRCRAFT_SELECTED_COLOR = "#FFFF00";
 
 // ATS Routes
 const ROUTES = [
@@ -195,7 +195,7 @@ function drawRunway(){
     const p1 = bearingToXY(rwy.bearing1,10);
     const p2 = bearingToXY(rwy.bearing2,10);
 
-    ctx.strokeStyle = "#000000";
+    ctx.strokeStyle = "#FFFFFF";
     ctx.lineWidth = 4;
 
     ctx.beginPath();
@@ -203,7 +203,7 @@ function drawRunway(){
     ctx.lineTo(p2.x,p2.y);
     ctx.stroke();
 
-    ctx.fillStyle = "#000000";
+    ctx.fillStyle = "#FFFFFF";
     ctx.font = "16px Arial";
 
     ctx.fillText(rwy.label1,p1.x-22,p1.y+8);
@@ -224,7 +224,7 @@ function drawCentreline(){
 
     ctx.save();
 
-    ctx.strokeStyle="#CC9900";
+    ctx.strokeStyle="#FFAA00";
     ctx.lineWidth=2;
     ctx.setLineDash([10,6]);
 
@@ -275,7 +275,7 @@ function drawTrafficCircuit(){
         y:end2.y - py*offset
     };
 
-    ctx.strokeStyle="#CC9900";
+    ctx.strokeStyle="#FF0000";
     ctx.lineWidth=2;
 
     // Upper box
@@ -304,11 +304,11 @@ function drawCCB(){
     ctx.beginPath();
     ctx.arc(CCB.x,CCB.y,4,0,Math.PI*2);
 
-    ctx.fillStyle="#0066CC";
+    ctx.fillStyle="#00FFFF";
     ctx.fill();
 
     ctx.font="16px Arial";
-    ctx.fillStyle="#0066CC";
+    ctx.fillStyle="#00FFFF";
 
     ctx.fillText("CCB",CCB.x+8,CCB.y-8);
 
@@ -361,13 +361,13 @@ function drawNDBs(){
         ctx.translate(ndb.x, ndb.y);
         ctx.rotate(Math.PI / 4);
 
-        ctx.fillStyle = "#CC7A00";
+        ctx.fillStyle = "#FFAA00";
         ctx.fillRect(-4, -4, 8, 8);
 
         ctx.restore();
 
         ctx.font = "15px Consolas";
-        ctx.fillStyle = "#CC7A00";
+        ctx.fillStyle = "#FFAA00";
         ctx.textAlign = "left";
 
         ctx.fillText(
@@ -439,11 +439,11 @@ function drawNDBRoutes(){
 
 const VAD99 = [
 
-    {bearing:110, distance:9},
-    {bearing:135, distance:11},
-    {bearing:150, distance:9},
-    {bearing:145, distance:5},
-    {bearing:120, distance:5}
+    {bearing:110, distance:15},
+    {bearing:135, distance:26},
+    {bearing:150, distance:22},
+    {bearing:145, distance:17},
+    {bearing:120, distance:15}
 
 ];
 
@@ -470,16 +470,16 @@ function drawVAD99(){
 
     ctx.closePath();
 
-    ctx.fillStyle = "rgba(150,150,150,0.35)";
+    ctx.fillStyle = "rgba(255,0,0,0.20)";
     ctx.fill();
 
-    ctx.strokeStyle = "#555555";
+    ctx.strokeStyle = "#FF0000";
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    const labelPt = bearingToXY(130, 9);
+    const labelPt = bearingToXY(130, 20);
 
-    ctx.fillStyle = "#333333";
+    ctx.fillStyle = "#FF0000";
     ctx.font = "13px Consolas";
     ctx.textAlign = "center";
     ctx.fillText("VAD-99", labelPt.x, labelPt.y - 4);
@@ -487,6 +487,68 @@ function drawVAD99(){
     ctx.textAlign = "left";
 
     ctx.restore();
+
+}
+
+// ======================================
+// Range / Bearing Line (RBL) between aircraft
+// ======================================
+
+let rbls = [];
+let rblMode = false;
+let rblFirstAircraft = null;
+
+function drawRBLs(){
+
+    const activeList =
+    [...(typeof aircraft !== "undefined" ? aircraft : []),
+     ...(typeof departures !== "undefined" ? departures : [])]
+    .filter(ac => ac.active);
+
+    rbls.forEach(rbl=>{
+
+        if(!activeList.includes(rbl.a) || !activeList.includes(rbl.b)) return;
+
+        const ax = rbl.a.x, ay = rbl.a.y;
+        const bx = rbl.b.x, by = rbl.b.y;
+
+        const dx = bx - ax;
+        const dy = by - ay;
+
+        const distanceNM = Math.sqrt(dx*dx + dy*dy) / PIXELS_PER_NM;
+
+        let bearing = (Math.atan2(dy,dx) * 180 / Math.PI) + 90;
+        bearing = (bearing + 360) % 360;
+
+        ctx.save();
+
+        ctx.strokeStyle = "#00FFFF";
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([6,4]);
+
+        ctx.beginPath();
+        ctx.moveTo(ax,ay);
+        ctx.lineTo(bx,by);
+        ctx.stroke();
+
+        ctx.setLineDash([]);
+
+        const midX = (ax+bx)/2;
+        const midY = (ay+by)/2;
+
+        const label =
+        Math.round(bearing) + "°/" +
+        distanceNM.toFixed(1) + "NM";
+
+        ctx.fillStyle = "#00FFFF";
+        ctx.font = "13px Consolas";
+        ctx.textAlign = "center";
+        ctx.fillText(label, midX, midY - 6);
+        ctx.textAlign = "left";
+
+        ctx.restore();
+
+    });
 
 }
 
@@ -572,10 +634,101 @@ function drawAircraft(){
     if(typeof aircraft === "undefined") return;
 
 
-   [...aircraft, ...(typeof departures !== "undefined" ? departures : [])].forEach(ac=>{
+    const activeList =
+    [...aircraft, ...(typeof departures !== "undefined" ? departures : [])]
+    .filter(ac => ac.active);
 
-        if(!ac.active) return;
 
+    // =====================================
+    // PASS 1: compute label anchor points,
+    // then repel overlapping labels apart
+    // =====================================
+
+    const LABEL_W = 95;
+    const LABEL_H = 46;
+
+    const labels = activeList.map(ac=>{
+
+        const angle = ac.labelAngle * Math.PI / 180;
+        const leaderLength = 45;
+
+        const bx = ac.x + Math.cos(angle) * leaderLength;
+        const by = ac.y + Math.sin(angle) * leaderLength;
+
+        if(!ac.labelOffset){
+            ac.labelOffset = {x:0, y:0};
+        }
+
+        return {
+            ac,
+            bx, by,
+            ox: ac.labelOffset.x,
+            oy: ac.labelOffset.y
+        };
+
+    });
+
+    for(let pass=0; pass<4; pass++){
+
+        for(let i=0; i<labels.length; i++){
+
+            for(let j=i+1; j<labels.length; j++){
+
+                const a = labels[i];
+                const b = labels[j];
+
+                const ax = a.bx + a.ox;
+                const ay = a.by + a.oy;
+                const cx = b.bx + b.ox;
+                const cy = b.by + b.oy;
+
+                const dx = cx - ax;
+                const dy = cy - ay;
+
+                const overlapX = LABEL_W - Math.abs(dx);
+                const overlapY = LABEL_H - Math.abs(dy);
+
+                if(overlapX > 0 && overlapY > 0){
+
+                    // Push apart along the axis with LESS overlap
+                    if(overlapX < overlapY){
+
+                        const push = (overlapX / 2) * (dx >= 0 ? 1 : -1);
+                        a.ox -= push;
+                        b.ox += push;
+
+                    }
+                    else{
+
+                        const push = (overlapY / 2) * (dy >= 0 ? 1 : -1);
+                        a.oy -= push;
+                        b.oy += push;
+
+                    }
+
+                }
+
+            }
+
+        }
+
+    }
+
+    // Persist (with light smoothing so labels glide, not jump)
+    labels.forEach(l=>{
+
+        l.ac.labelOffset.x += (l.ox - l.ac.labelOffset.x) * 0.4;
+        l.ac.labelOffset.y += (l.oy - l.ac.labelOffset.y) * 0.4;
+
+    });
+
+
+    // =====================================
+    // PASS 2: draw trail, blip, leader line,
+    // and label at its (possibly repelled) spot
+    // =====================================
+
+    labels.forEach(({ac, bx, by})=>{
 
         const x = ac.x;
         const y = ac.y;
@@ -587,6 +740,9 @@ function drawAircraft(){
         const acColor = isSelected
         ? AIRCRAFT_SELECTED_COLOR
         : AIRCRAFT_COLOR;
+
+        const lx = bx + ac.labelOffset.x;
+        const ly = by + ac.labelOffset.y;
 
 
         // =====================================
@@ -602,8 +758,8 @@ function drawAircraft(){
                 ctx.beginPath();
                 ctx.arc(pt.x, pt.y, 2.5, 0, Math.PI*2);
                 ctx.fillStyle = isSelected
-                ? `rgba(255,215,0,${fade})`
-                : `rgba(0,204,0,${fade})`;
+                ? `rgba(255,255,0,${fade})`
+                : `rgba(0,255,0,${fade})`;
                 ctx.fill();
 
             });
@@ -632,22 +788,9 @@ function drawAircraft(){
 
 
         // =====================================
-        // Leader line
+        // Leader line (follows the label
+        // even after it's been repelled)
         // =====================================
-
-        const angle =
-        ac.labelAngle * Math.PI / 180;
-
-
-        const leaderLength = 45;
-
-
-        const lx =
-        x + Math.cos(angle) * leaderLength;
-
-        const ly =
-        y + Math.sin(angle) * leaderLength;
-
 
         ctx.strokeStyle = acColor;
         ctx.lineWidth = 1;
@@ -670,6 +813,7 @@ function drawAircraft(){
         let labelX;
         let align;
 
+        const angle = ac.labelAngle * Math.PI / 180;
 
         if(Math.cos(angle) >= 0){
 
@@ -809,6 +953,7 @@ function drawRadar(){
 
     drawUnknownBlips();
     drawAircraft();
+    drawRBLs();
 
     requestAnimationFrame(drawRadar);
 
@@ -834,6 +979,35 @@ window.onload = function(){
 
     }
 
+    const rblBtn = document.getElementById("rblBtn");
+    const clearRblBtn = document.getElementById("clearRblBtn");
+
+    if(rblBtn){
+
+        rblBtn.onclick = function(){
+
+            rblMode = !rblMode;
+            rblFirstAircraft = null;
+
+            rblBtn.style.background = rblMode ? "#007700" : "";
+
+            console.log("RBL mode:", rblMode);
+
+        };
+
+    }
+
+    if(clearRblBtn){
+
+        clearRblBtn.onclick = function(){
+
+            rbls = [];
+            rblFirstAircraft = null;
+
+        };
+
+    }
+
 };
 
 canvas.addEventListener("click", function(e){
@@ -854,6 +1028,44 @@ canvas.addEventListener("click", function(e){
 
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
+
+    // =====================================
+    // RBL mode: click two aircraft blips
+    // =====================================
+
+    if(rblMode){
+
+        const activeList =
+        [...aircraft, ...(typeof departures !== "undefined" ? departures : [])]
+        .filter(ac => ac.active);
+
+        const hit = activeList.find(ac=>{
+            const dx = mx - ac.x;
+            const dy = my - ac.y;
+            return Math.sqrt(dx*dx+dy*dy) <= 10;
+        });
+
+        if(hit){
+
+            if(!rblFirstAircraft){
+
+                rblFirstAircraft = hit;
+                console.log("RBL: first aircraft =", hit.callsign);
+
+            }
+            else if(hit !== rblFirstAircraft){
+
+                rbls.push({a:rblFirstAircraft, b:hit});
+                console.log("RBL drawn:", rblFirstAircraft.callsign, "-", hit.callsign);
+                rblFirstAircraft = null;
+
+            }
+
+        }
+
+        return;
+
+    }
 
 [...aircraft, ...(typeof departures !== "undefined" ? departures : [])].forEach(ac=>{
         if(!ac.active) return;
