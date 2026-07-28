@@ -257,6 +257,81 @@ function drawTrafficCircuit(){
     ctx.stroke();
 
 }
+
+function drawRunway1533(){
+
+    const p1 = bearingToXY(335,10);
+    const p2 = bearingToXY(155,10);
+
+    ctx.strokeStyle="#FFFFFF";
+    ctx.lineWidth=4;
+
+    ctx.beginPath();
+    ctx.moveTo(p1.x,p1.y);
+    ctx.lineTo(p2.x,p2.y);
+    ctx.stroke();
+
+    ctx.fillStyle="#FFFFFF";
+    ctx.font="16px Arial";
+
+    ctx.fillText("33",p1.x-20,p1.y);
+    ctx.fillText("15",p2.x+8,p2.y);
+
+}
+function drawTrafficCircuit1533(){
+
+    const end33 = bearingToXY(335,12);
+    const end15 = bearingToXY(155,12);
+
+    const dx = end15.x - end33.x;
+    const dy = end15.y - end33.y;
+    const len = Math.sqrt(dx*dx + dy*dy);
+
+    const px = -dy / len;
+    const py = dx / len;
+
+    const offset = nm(5);
+
+    const top33 = {
+        x: end33.x + px * offset,
+        y: end33.y + py * offset
+    };
+
+    const top15 = {
+        x: end15.x + px * offset,
+        y: end15.y + py * offset
+    };
+
+    const bot33 = {
+        x: end33.x - px * offset,
+        y: end33.y - py * offset
+    };
+
+    const bot15 = {
+        x: end15.x - px * offset,
+        y: end15.y - py * offset
+    };
+
+    ctx.strokeStyle = "#FFFF00";
+    ctx.lineWidth = 2;
+
+    // Upper circuit
+    ctx.beginPath();
+    ctx.moveTo(end33.x, end33.y);
+    ctx.lineTo(top33.x, top33.y);
+    ctx.lineTo(top15.x, top15.y);
+    ctx.lineTo(end15.x, end15.y);
+    ctx.stroke();
+
+    // Lower circuit
+    ctx.beginPath();
+    ctx.moveTo(end33.x, end33.y);
+    ctx.lineTo(bot33.x, bot33.y);
+    ctx.lineTo(bot15.x, bot15.y);
+    ctx.lineTo(end15.x, end15.y);
+    ctx.stroke();
+
+}
 // ======================================
 // Draw CCB VOR
 // ======================================
@@ -273,6 +348,52 @@ function drawCCB(){
     ctx.fillStyle="#00FFFF";
 
     ctx.fillText("CCB",CCB.x+8,CCB.y-8);
+
+}
+function drawNDBs(){
+
+    ctx.strokeStyle="#00FFFF";
+    ctx.fillStyle="#00FFFF";
+    ctx.font="15px Consolas";
+
+    NDBS.forEach(ndb=>{
+
+        const p = bearingToXY(
+            ndb.radial,
+            ndb.distance
+        );
+
+        // NDB symbol
+
+        ctx.beginPath();
+
+        ctx.arc(
+            p.x,
+            p.y,
+            4,
+            0,
+            Math.PI*2
+        );
+
+        ctx.stroke();
+
+        ctx.beginPath();
+
+        ctx.moveTo(p.x-6,p.y);
+        ctx.lineTo(p.x+6,p.y);
+
+        ctx.moveTo(p.x,p.y-6);
+        ctx.lineTo(p.x,p.y+6);
+
+        ctx.stroke();
+
+        ctx.fillText(
+            ndb.id,
+            p.x+8,
+            p.y-8
+        );
+
+    });
 
 }
 
@@ -591,6 +712,8 @@ function drawRadar(){
     drawTrafficCircuit();
     drawCentreline();
     drawCCB();
+drawRunway1533();
+    drawTrafficCircuit1533();
 
     drawUnknownBlips();
     drawAircraft();
