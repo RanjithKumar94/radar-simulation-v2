@@ -385,10 +385,25 @@ if(ac.heading !== ac.targetHeading){
 
 
         // ===============================
-// Arrival phase at 8.5 NM
+// Distance to TOUCHDOWN, not just to CCB
+// (RWY 08/26 threshold isn't at CCB - see
+// getTouchdownCorrectionNM in radar.js)
 // ===============================
 
-if(ac.distance <= 8.5){
+const touchdownDistance = Math.max(
+    0,
+    ac.distance + (
+        typeof getTouchdownCorrectionNM === "function"
+        ? getTouchdownCorrectionNM(activeRunwayDirection)
+        : 0
+    )
+);
+
+// ===============================
+// Arrival phase at 8.5 NM (from touchdown)
+// ===============================
+
+if(touchdownDistance <= 8.5){
 
     ac.arrivalPhase = true;
 
@@ -451,7 +466,7 @@ else{
 // Final Approach Descent
 // =====================================
 
-if(ac.distance <= 8.5 && ac.targetLevel === 0){
+if(touchdownDistance <= 8.5 && ac.targetLevel === 0){
 
     ac.approach = true;
 
@@ -460,9 +475,9 @@ if(ac.distance <= 8.5 && ac.targetLevel === 0){
 
 if(ac.approach){
 
-    // Descend based on distance remaining
+    // Descend based on distance remaining TO TOUCHDOWN
 
-    let requiredLevel = ac.distance * 2.35;
+    let requiredLevel = touchdownDistance * 2.35;
 
     if(requiredLevel < 0)
         requiredLevel = 0;
@@ -518,10 +533,19 @@ if(ac.approach){
 
 
         // ===============================
-        // Landing
+        // Landing (based on distance to touchdown)
         // ===============================
 
-        if(ac.distance <= 0.1 && ac.level <= 0){
+        const landingTouchdownDistance = Math.max(
+            0,
+            ac.distance + (
+                typeof getTouchdownCorrectionNM === "function"
+                ? getTouchdownCorrectionNM(activeRunwayDirection)
+                : 0
+            )
+        );
+
+        if(landingTouchdownDistance <= 0.1 && ac.level <= 0){
 
             ac.landed = true;
 
