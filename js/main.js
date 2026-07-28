@@ -74,11 +74,6 @@ function entryOffset(type) {
     }
 
 }
-let activeRunway = "08";
-
-document.getElementById("runwaySelect").addEventListener("change", e => {
-    activeRunway = e.target.value;
-});
 document.getElementById("applyBtn").onclick = function(){
 
     if(selectedAircraft == null){
@@ -435,6 +430,14 @@ if(ac.approach){
         // ===============================
         // Move aircraft
         // ===============================
+
+        if(!ac.trail) ac.trail = [];
+
+        ac.trail.push({x:ac.x, y:ac.y});
+
+        if(ac.trail.length > 3){
+            ac.trail.shift();
+        }
 
         const pixels =
         movement * PIXELS_PER_NM;
