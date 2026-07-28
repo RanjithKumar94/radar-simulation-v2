@@ -982,7 +982,7 @@ function drawAircraft(){
         }
 
         const levelText =
-        "FL" + currentFL + " FL" + assignedFL + rateText;
+        currentFL + " " + assignedFL + rateText;
 
         ctx.fillText(
             levelText,
@@ -1209,8 +1209,13 @@ console.log(
             document.getElementById("callsign").value = ac.callsign;
             document.getElementById("heading").value = ac.targetHeading;
             document.getElementById("level").value = ac.targetLevel;
-            document.getElementById("speedInput").value =
-            (ac.targetSpeed !== undefined ? ac.targetSpeed : ac.speed);
+
+            const speedEl = document.getElementById("speedInput");
+
+            if(speedEl){
+                speedEl.value =
+                (ac.targetSpeed !== undefined ? ac.targetSpeed : ac.speed);
+            }
 
             // Turn direction
             const turn = document.querySelector(
