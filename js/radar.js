@@ -27,65 +27,12 @@ const CCB = {
 };
 
 // Colours
-const BG_COLOR = "#001100";
-const RING_COLOR = "#00aa44";
-const ROUTE_COLOR = "#00ff66";
-const TEXT_COLOR = "#00ff66";
-
-// ATS Routes
-// ======================================
-// ATC RADAR SIMULATOR
-// radar.js - PART 1
-// ======================================
-
-// Canvas
-const canvas = document.getElementById("radar");
-const ctx = canvas.getContext("2d");
-
-// Radar Size
-const RADAR_RADIUS = 380;
-const MAX_RANGE = 60;
-const PIXELS_PER_NM = RADAR_RADIUS / MAX_RANGE;
-
-function nm(value){
-    return value * PIXELS_PER_NM;
-}
-
-// Radar Centre
-const CENTER_X = canvas.width / 2;
-const CENTER_Y = canvas.height / 2;
-
-// CCB VOR
-const CCB = {
-    x: CENTER_X,
-    y: CENTER_Y + 3
-};
-const NDBS = [
-
-    {
-        id:"PJ",
-        radial:190,
-        distance:30
-    },
-
-    {
-        id:"BR",
-        radial:252,
-        distance:35
-    },
-
-    {
-        id:"NT",
-        radial:15,
-        distance:20
-    }
-
-];
-// Colours
-const BG_COLOR = "#001100";
-const RING_COLOR = "#00aa44";
-const ROUTE_COLOR = "#00ff66";
-const TEXT_COLOR = "#00ff66";
+const BG_COLOR = "#FFFFFF";
+const RING_COLOR = "#888888";
+const ROUTE_COLOR = "#000000";
+const TEXT_COLOR = "#000000";
+const AIRCRAFT_COLOR = "#00CC00";
+const AIRCRAFT_SELECTED_COLOR = "#FFD700";
 
 // ATS Routes
 const ROUTES = [
@@ -97,10 +44,47 @@ const ROUTES = [
     {name:"Q2", bearing:270},
     {name:"G473 NW", bearing:300},
     {name:"G473 SE", bearing:120},
+    {name:"088-R/CCB", bearing:88}
 
-    // NEW
-    {name:"PJ", bearing:190},
-    {name:"088", bearing:88}
+];
+
+// ======================================
+// NDBs (defined by radial/distance from CCB)
+// ======================================
+
+const NDBS = [
+
+    {name:"PJ", fullName:"PANKAJ", bearing:190, distance:30},   // sits on the B425 track
+    {name:"BR", fullName:"BINSAR", bearing:252, distance:35},
+    {name:"NT", fullName:"NIPTAN", bearing:20,  distance:15}
+
+];
+
+// Resolve each NDB's x/y once CCB is known
+NDBS.forEach(ndb=>{
+
+    const pos = bearingToXY(ndb.bearing, ndb.distance);
+
+    ndb.x = pos.x;
+    ndb.y = pos.y;
+
+});
+
+function getNDB(name){
+
+    return NDBS.find(n => n.name === name);
+
+}
+
+// ======================================
+// Routes that originate from an NDB
+// rather than from CCB directly
+// ======================================
+
+const NDB_ROUTES = [
+
+    {name:"W-20", from:"PJ", track:160, length:30},
+    {name:"109 TR PJ", from:"PJ", track:109, length:30}
 
 ];
 
@@ -110,15 +94,26 @@ const ROUTES = [
 
 function bearingToXY(bearing, distance){
 
+    return pointFromXY(CCB, bearing, distance);
+
+}
+
+// ======================================
+// Generic projection from ANY origin point
+// (used for NDB-based routes, e.g. PJ NDB)
+// ======================================
+
+function pointFromXY(origin, bearing, distance){
+
     const angle = (bearing - 90) * Math.PI / 180;
 
     const scale = RADAR_RADIUS / MAX_RANGE;
 
     return {
 
-        x: CCB.x + Math.cos(angle) * distance * scale,
+        x: origin.x + Math.cos(angle) * distance * scale,
 
-        y: CCB.y + Math.sin(angle) * distance * scale
+        y: origin.y + Math.sin(angle) * distance * scale
 
     };
 
@@ -152,17 +147,55 @@ function drawBackground(){
 
     }
 }
-  // ======================================
+// ======================================
+// Runway Configuration
+// ======================================
+
+const RUNWAYS = {
+
+    "0826": {
+        bearing1:260, label1:"26",
+        bearing2:80,  label2:"08"
+    },
+
+    "1533": {
+        bearing1:335, label1:"33",
+        bearing2:155, label2:"15"
+    }
+
+};
+
+// Default active runway
+let activeRunway = "0826";
+
+function getActiveRunway(){
+    return RUNWAYS[activeRunway];
+}
+
+function setActiveRunwayFromSelect(value){
+
+    if(value === "08" || value === "26"){
+        activeRunway = "0826";
+    }
+    else{
+        activeRunway = "1533";
+    }
+
+}
+
+// ======================================
 // PART 2
 // Draw Runway
 // ======================================
 
 function drawRunway(){
 
-    const p1 = bearingToXY(260,10);
-    const p2 = bearingToXY(80,10);
+    const rwy = getActiveRunway();
 
-    ctx.strokeStyle = "#FFFFFF";
+    const p1 = bearingToXY(rwy.bearing1,10);
+    const p2 = bearingToXY(rwy.bearing2,10);
+
+    ctx.strokeStyle = "#000000";
     ctx.lineWidth = 4;
 
     ctx.beginPath();
@@ -170,11 +203,11 @@ function drawRunway(){
     ctx.lineTo(p2.x,p2.y);
     ctx.stroke();
 
-    ctx.fillStyle = "#FFFFFF";
+    ctx.fillStyle = "#000000";
     ctx.font = "16px Arial";
 
-    ctx.fillText("08",p1.x-22,p1.y+8);
-    ctx.fillText("26",p2.x+8,p2.y+8);
+    ctx.fillText(rwy.label1,p1.x-22,p1.y+8);
+    ctx.fillText(rwy.label2,p2.x+8,p2.y+8);
 
 }
 
@@ -184,12 +217,14 @@ function drawRunway(){
 
 function drawCentreline(){
 
-    const start = bearingToXY(260,15);
-    const end   = bearingToXY(80,15);
+    const rwy = getActiveRunway();
+
+    const start = bearingToXY(rwy.bearing1,15);
+    const end   = bearingToXY(rwy.bearing2,15);
 
     ctx.save();
 
-    ctx.strokeStyle="#FFFF00";
+    ctx.strokeStyle="#CC9900";
     ctx.lineWidth=2;
     ctx.setLineDash([10,6]);
 
@@ -202,14 +237,17 @@ function drawCentreline(){
 
 }
 // ======================================
-// Draw Traffic Circuit RWY 08/26
+// Draw Traffic Circuit (active runway)
 // ======================================
 
 function drawTrafficCircuit(){
-    const end08 = bearingToXY(260,12);
-    const end26 = bearingToXY(80,12);
-    const dx = end26.x - end08.x;
-    const dy = end26.y - end08.y;
+
+    const rwy = getActiveRunway();
+
+    const end1 = bearingToXY(rwy.bearing1,12);
+    const end2 = bearingToXY(rwy.bearing2,12);
+    const dx = end2.x - end1.x;
+    const dy = end2.y - end1.y;
     const len = Math.sqrt(dx*dx + dy*dy);
 
     const px = -dy / len;
@@ -217,118 +255,43 @@ function drawTrafficCircuit(){
 
     const offset = nm(5);
 
-    const top08 = {
-        x:end08.x + px*offset,
-        y:end08.y + py*offset
+    const top1 = {
+        x:end1.x + px*offset,
+        y:end1.y + py*offset
     };
 
-    const top26 = {
-        x:end26.x + px*offset,
-        y:end26.y + py*offset
+    const top2 = {
+        x:end2.x + px*offset,
+        y:end2.y + py*offset
     };
 
-    const bot08 = {
-        x:end08.x - px*offset,
-        y:end08.y - py*offset
+    const bot1 = {
+        x:end1.x - px*offset,
+        y:end1.y - py*offset
     };
 
-    const bot26 = {
-        x:end26.x - px*offset,
-        y:end26.y - py*offset
+    const bot2 = {
+        x:end2.x - px*offset,
+        y:end2.y - py*offset
     };
 
-    ctx.strokeStyle="#FFFF00";
+    ctx.strokeStyle="#CC9900";
     ctx.lineWidth=2;
 
     // Upper box
     ctx.beginPath();
-    ctx.moveTo(end08.x,end08.y);
-    ctx.lineTo(top08.x,top08.y);
-    ctx.lineTo(top26.x,top26.y);
-    ctx.lineTo(end26.x,end26.y);
+    ctx.moveTo(end1.x,end1.y);
+    ctx.lineTo(top1.x,top1.y);
+    ctx.lineTo(top2.x,top2.y);
+    ctx.lineTo(end2.x,end2.y);
     ctx.stroke();
 
     // Lower box
     ctx.beginPath();
-    ctx.moveTo(end08.x,end08.y);
-    ctx.lineTo(bot08.x,bot08.y);
-    ctx.lineTo(bot26.x,bot26.y);
-    ctx.lineTo(end26.x,end26.y);
-    ctx.stroke();
-
-}
-
-function drawRunway1533(){
-
-    const p1 = bearingToXY(335,10);
-    const p2 = bearingToXY(155,10);
-
-    ctx.strokeStyle="#FFFFFF";
-    ctx.lineWidth=4;
-
-    ctx.beginPath();
-    ctx.moveTo(p1.x,p1.y);
-    ctx.lineTo(p2.x,p2.y);
-    ctx.stroke();
-
-    ctx.fillStyle="#FFFFFF";
-    ctx.font="16px Arial";
-
-    ctx.fillText("33",p1.x-20,p1.y);
-    ctx.fillText("15",p2.x+8,p2.y);
-
-}
-function drawTrafficCircuit1533(){
-
-    const end33 = bearingToXY(335,12);
-    const end15 = bearingToXY(155,12);
-
-    const dx = end15.x - end33.x;
-    const dy = end15.y - end33.y;
-    const len = Math.sqrt(dx*dx + dy*dy);
-
-    const px = -dy / len;
-    const py = dx / len;
-
-    const offset = nm(5);
-
-    const top33 = {
-        x: end33.x + px * offset,
-        y: end33.y + py * offset
-    };
-
-    const top15 = {
-        x: end15.x + px * offset,
-        y: end15.y + py * offset
-    };
-
-    const bot33 = {
-        x: end33.x - px * offset,
-        y: end33.y - py * offset
-    };
-
-    const bot15 = {
-        x: end15.x - px * offset,
-        y: end15.y - py * offset
-    };
-
-    ctx.strokeStyle = "#FFFF00";
-    ctx.lineWidth = 2;
-
-    // Upper circuit
-    ctx.beginPath();
-    ctx.moveTo(end33.x, end33.y);
-    ctx.lineTo(top33.x, top33.y);
-    ctx.lineTo(top15.x, top15.y);
-    ctx.lineTo(end15.x, end15.y);
-    ctx.stroke();
-
-    // Lower circuit
-    ctx.beginPath();
-    ctx.moveTo(end33.x, end33.y);
-    ctx.lineTo(bot33.x, bot33.y);
-    ctx.lineTo(bot15.x, bot15.y);
-    ctx.lineTo(end15.x, end15.y);
+    ctx.moveTo(end1.x,end1.y);
+    ctx.lineTo(bot1.x,bot1.y);
+    ctx.lineTo(bot2.x,bot2.y);
+    ctx.lineTo(end2.x,end2.y);
     ctx.stroke();
 
 }
@@ -341,56 +304,76 @@ function drawCCB(){
     ctx.beginPath();
     ctx.arc(CCB.x,CCB.y,4,0,Math.PI*2);
 
-    ctx.fillStyle="#00FFFF";
+    ctx.fillStyle="#0066CC";
     ctx.fill();
 
     ctx.font="16px Arial";
-    ctx.fillStyle="#00FFFF";
+    ctx.fillStyle="#0066CC";
 
     ctx.fillText("CCB",CCB.x+8,CCB.y-8);
 
 }
-function drawNDBs(){
 
-    ctx.strokeStyle="#00FFFF";
-    ctx.fillStyle="#00FFFF";
-    ctx.font="15px Consolas";
+// ======================================
+// Draw ATS Routes
+// ======================================
+
+function drawRoutes(){
+
+    ctx.strokeStyle=ROUTE_COLOR;
+    ctx.lineWidth=2;
+
+    ROUTES.forEach(route=>{
+
+        const end = bearingToXY(route.bearing,60);
+
+        ctx.beginPath();
+        ctx.moveTo(CCB.x,CCB.y);
+        ctx.lineTo(end.x,end.y);
+        ctx.stroke();
+
+        const label = bearingToXY(route.bearing,56);
+
+        ctx.fillStyle = TEXT_COLOR;
+        ctx.font = "15px Consolas";
+
+        ctx.fillText(
+            route.name,
+            label.x-15,
+            label.y
+        );
+
+    });
+
+}
+// ======================================
+// Draw NDBs
+// ======================================
+
+function drawNDBs(){
 
     NDBS.forEach(ndb=>{
 
-        const p = bearingToXY(
-            ndb.radial,
-            ndb.distance
-        );
+        // Diamond marker (to distinguish from the CCB VOR circle)
 
-        // NDB symbol
+        ctx.save();
 
-        ctx.beginPath();
+        ctx.translate(ndb.x, ndb.y);
+        ctx.rotate(Math.PI / 4);
 
-        ctx.arc(
-            p.x,
-            p.y,
-            4,
-            0,
-            Math.PI*2
-        );
+        ctx.fillStyle = "#CC7A00";
+        ctx.fillRect(-4, -4, 8, 8);
 
-        ctx.stroke();
+        ctx.restore();
 
-        ctx.beginPath();
-
-        ctx.moveTo(p.x-6,p.y);
-        ctx.lineTo(p.x+6,p.y);
-
-        ctx.moveTo(p.x,p.y-6);
-        ctx.lineTo(p.x,p.y+6);
-
-        ctx.stroke();
+        ctx.font = "15px Consolas";
+        ctx.fillStyle = "#CC7A00";
+        ctx.textAlign = "left";
 
         ctx.fillText(
-            ndb.id,
-            p.x+8,
-            p.y-8
+            (ndb.fullName || ndb.name) + " " + ndb.name,
+            ndb.x + 8,
+            ndb.y - 8
         );
 
     });
@@ -398,611 +381,115 @@ function drawNDBs(){
 }
 
 // ======================================
-// Draw ATS Routes
+// Draw routes that originate from an NDB
 // ======================================
 
-function drawRoutes(){
+function drawNDBRoutes(){
 
-    ctx.strokeStyle=ROUTE_COLOR;
-    ctx.lineWidth=2;
+    ctx.strokeStyle = ROUTE_COLOR;
+    ctx.lineWidth = 2;
 
-    ROUTES.forEach(route=>{
+    NDB_ROUTES.forEach(route=>{
 
-        const end = bearingToXY(route.bearing,60);
+        const origin = getNDB(route.from);
+
+        if(!origin){
+            console.warn("NDB_ROUTES: unknown origin NDB", route.from);
+            return;
+        }
+
+        const end = pointFromXY(
+            {x:origin.x, y:origin.y},
+            route.track,
+            route.length
+        );
 
         ctx.beginPath();
-        ctx.moveTo(CCB.x,CCB.y);
-        ctx.lineTo(end.x,end.y);
+        ctx.moveTo(origin.x, origin.y);
+        ctx.lineTo(end.x, end.y);
         ctx.stroke();
 
-        const label = bearingToXY(route.bearing,56);
+        const label = pointFromXY(
+            {x:origin.x, y:origin.y},
+            route.track,
+            route.length - 4
+        );
 
         ctx.fillStyle = TEXT_COLOR;
         ctx.font = "15px Consolas";
+        ctx.textAlign = "left";
 
         ctx.fillText(
             route.name,
-            label.x-15,
+            label.x - 15,
             label.y
         );
 
     });
 
 }
-// ======================================
-// TRAFFIC CIRCUIT CONFIGURATION
-// ======================================
-
-const CIRCUIT = {
-
-    centreline:15,
-    final:8,
-    upwind:8,
-    downwind:12,
-    width:5
-
-};
-
-  // ======================================
-// PART 3
-// Draw Aircraft (placeholder)
-// ======================================
 
 // ======================================
-// Draw Aircraft
-// ======================================
-// ======================================
-// Draw Unknown Blips
-// ======================================
-
-function drawUnknownBlips(){
-
-    unknownBlips.forEach(blip => {
-
-        if(!blip.active) return;
-
-        ctx.beginPath();
-        ctx.arc(blip.x, blip.y, 5, 0, Math.PI * 2);
-        ctx.fillStyle = "#00FF00";
-        ctx.fill();
-
-    });
-
-}
-// ======================================
-// Draw Aircraft
-// ======================================
-// ======================================
-// Draw Aircraft
+// VAD-99 Area (GND/UNL)
+// NOTE: approximated from the chart image -
+// no exact radial/distance vertices were given.
+// Adjust the bearing/distance pairs below if you
+// have the official coordinates.
 // ======================================
 
-// ======================================
-// Draw Aircraft
-// ======================================
+const VAD99 = [
 
-function drawAircraft(){
+    {bearing:110, distance:9},
+    {bearing:135, distance:11},
+    {bearing:150, distance:9},
+    {bearing:145, distance:5},
+    {bearing:120, distance:5}
 
-    // Draw unknown traffic
-    if(typeof unknownBlips !== "undefined"){
+];
 
-        unknownBlips.forEach(blip=>{
+function drawVAD99(){
 
-            if(!blip.active) return;
-
-            ctx.fillStyle = "#FF0000";
-
-            ctx.beginPath();
-
-            ctx.arc(
-                blip.x,
-                blip.y,
-                6,
-                0,
-                Math.PI * 2
-            );
-
-            ctx.fill();
-
-        });
-
-    }
-
-
-    if(typeof aircraft === "undefined") return;
-
-
-   [...aircraft, ...(typeof departures !== "undefined" ? departures : [])].forEach(ac=>{
-
-        if(!ac.active) return;
-
-
-        const x = ac.x;
-        const y = ac.y;
-
-
-        // =====================================
-        // Aircraft blip
-        // =====================================
-
-        ctx.fillStyle = "#00FF00";
-
-        ctx.beginPath();
-
-        ctx.arc(
-            x,
-            y,
-            4,
-            0,
-            Math.PI * 2
-        );
-
-        ctx.fill();
-
-
-
-        // =====================================
-        // Leader line
-        // =====================================
-
-        const angle =
-        ac.labelAngle * Math.PI / 180;
-
-
-        const leaderLength = 45;
-
-
-        const lx =
-        x + Math.cos(angle) * leaderLength;
-
-        const ly =
-        y + Math.sin(angle) * leaderLength;
-
-
-        ctx.strokeStyle = "#00FF00";
-        ctx.lineWidth = 1;
-
-
-        ctx.beginPath();
-
-        ctx.moveTo(x,y);
-
-        ctx.lineTo(lx,ly);
-
-        ctx.stroke();
-
-
-
-        // =====================================
-        // Label anchor
-        // =====================================
-
-        let labelX;
-        let align;
-
-
-        if(Math.cos(angle) >= 0){
-
-            // Right side label
-            labelX = lx + 8;
-            align = "left";
-
-        }
-        else{
-
-            // Left side label
-            labelX = lx - 8;
-            align = "right";
-
-        }
-
-
-        ctx.textAlign = align;
-        ctx.fillStyle = "#00FF00";
-        ctx.font = "14px Consolas";
-
-
-
-        // =====================================
-        // Callsign
-        // =====================================
-
-        ctx.fillText(
-            ac.callsign,
-            labelX,
-            ly - 10
-        );
-
-
-
-        // =====================================
-        // Level
-        // =====================================
-
-        const currentFL =
-        Math.round(ac.level);
-
-        const assignedFL =
-        Math.round(ac.targetLevel);
-
-
-        let levelText;
-
-
-        if(currentFL < assignedFL){
-
-            levelText =
-            "FL" + currentFL +
-            " ↑ FL" + assignedFL;
-
-        }
-        else if(currentFL > assignedFL){
-
-            levelText =
-            "FL" + currentFL +
-            " ↓ FL" + assignedFL;
-
-        }
-        else{
-
-            levelText =
-            "FL" + currentFL;
-
-        }
-
-
-        ctx.fillText(
-            levelText,
-            labelX,
-            ly + 5
-        );
-
-
-
-        // =====================================
-        // Vertical speed
-        // =====================================
-
-        if(ac.verticalSpeed !== 0){
-
-            let vsText;
-
-
-            if(ac.verticalSpeed > 0){
-
-                vsText =
-                "↑" + ac.verticalSpeed;
-
-            }
-            else{
-
-                vsText =
-                "↓" + Math.abs(ac.verticalSpeed);
-
-            }
-
-
-            ctx.fillText(
-                vsText,
-                labelX,
-                ly + 20
-            );
-
-        }
-
-
-
-        // Reset
-        ctx.textAlign = "left";
-
-
-    });
-
-}
-// ======================================
-// Draw Complete Radar
-// ======================================
-
-function drawRadar(){
-
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-
-    drawBackground();
-    drawRoutes();
-    drawRunway();
-    drawTrafficCircuit();
-    drawCentreline();
-    drawCCB();
-drawRunway1533();
-    drawTrafficCircuit1533();
-
-    drawUnknownBlips();
-    drawAircraft();
-
-    requestAnimationFrame(drawRadar);
-
-}
-
-// ======================================
-// Start Radar
-// ======================================
-
-window.onload = function(){
-
-    drawRadar();
-
-};
-
-canvas.addEventListener("click", function(e){
-
-    console.log("Canvas clicked");
-
-});
-// ======================================
-// Label Click Detection
-// ======================================
-// ======================================
-// Aircraft Selection + Label Rotation
-// ======================================
-
-canvas.addEventListener("click", function(e){
-
-    const rect = canvas.getBoundingClientRect();
-
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
-
-[...aircraft, ...(typeof departures !== "undefined" ? departures : [])].forEach(ac=>{
-        if(!ac.active) return;
-
-        const angle = ac.labelAngle * Math.PI / 180;
-        const leaderLength = 35;
-
-        const lx = ac.x + Math.cos(angle) * leaderLength;
-        const ly = ac.y + Math.sin(angle) * leaderLength;
-
-        // Label hit box
-        if(
-            mx >= lx &&
-            mx <= lx + 100 &&
-            my >= ly - 20 &&
-            my <= ly + 35
-        ){
-console.log(
-    "Clicked aircraft:",
-    ac.callsign,
-    ac.labelAngle
-);
-            // Select aircraft
-            selectedAircraft = ac;
-
-            // Rotate label 45°
-            ac.labelAngle = (ac.labelAngle + 45) % 360;
-
-            // Fill control panel
-            document.getElementById("callsign").value = ac.callsign;
-            document.getElementById("heading").value = ac.targetHeading;
-            document.getElementById("level").value = ac.targetLevel;
-
-            // Turn direction
-            const turn = document.querySelector(
-                `input[name="turnDir"][value="${ac.turnDirection}"]`
-            );
-
-            if(turn){
-                turn.checked = true;
-            }
-
-            console.log(ac.callsign + " selected");
-        }
-
-    });
-
-});
-
-// ======================================
-// Convert Bearing & Distance to X,Y
-// ======================================
-
-function bearingToXY(bearing, distance){
-
-    const angle = (bearing - 90) * Math.PI / 180;
-
-    const scale = RADAR_RADIUS / MAX_RANGE;
-
-    return {
-
-        x: CCB.x + Math.cos(angle) * distance * scale,
-
-        y: CCB.y + Math.sin(angle) * distance * scale
-
-    };
-
-}
-
-// ======================================
-// Radar Background
-// ======================================
-
-function drawBackground(){
-
-    ctx.fillStyle = BG_COLOR;
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-
-    ctx.strokeStyle = RING_COLOR;
-    ctx.lineWidth = 1;
-
-    for(let i=10;i<=60;i+=10){
-
-        ctx.beginPath();
-
-        ctx.arc(
-            CCB.x,
-            CCB.y,
-            i * RADAR_RADIUS / MAX_RANGE,
-            0,
-            Math.PI * 2
-        );
-
-        ctx.stroke();
-
-    }
-}
-  // ======================================
-// PART 2
-// Draw Runway
-// ======================================
-
-function drawRunway(){
-
-    const p1 = bearingToXY(260,10);
-    const p2 = bearingToXY(80,10);
-
-    ctx.strokeStyle = "#FFFFFF";
-    ctx.lineWidth = 4;
-
-    ctx.beginPath();
-    ctx.moveTo(p1.x,p1.y);
-    ctx.lineTo(p2.x,p2.y);
-    ctx.stroke();
-
-    ctx.fillStyle = "#FFFFFF";
-    ctx.font = "16px Arial";
-
-    ctx.fillText("08",p1.x-22,p1.y+8);
-    ctx.fillText("26",p2.x+8,p2.y+8);
-
-}
-
-// ======================================
-// Draw Extended Runway Centreline
-// ======================================
-
-function drawCentreline(){
-
-    const start = bearingToXY(260,15);
-    const end   = bearingToXY(80,15);
+    if(VAD99.length === 0) return;
 
     ctx.save();
 
-    ctx.strokeStyle="#FFFF00";
-    ctx.lineWidth=2;
-    ctx.setLineDash([10,6]);
-
     ctx.beginPath();
-    ctx.moveTo(start.x,start.y);
-    ctx.lineTo(end.x,end.y);
+
+    VAD99.forEach((pt,i)=>{
+
+        const p = bearingToXY(pt.bearing, pt.distance);
+
+        if(i === 0){
+            ctx.moveTo(p.x,p.y);
+        }
+        else{
+            ctx.lineTo(p.x,p.y);
+        }
+
+    });
+
+    ctx.closePath();
+
+    ctx.fillStyle = "rgba(150,150,150,0.35)";
+    ctx.fill();
+
+    ctx.strokeStyle = "#555555";
+    ctx.lineWidth = 2;
     ctx.stroke();
+
+    const labelPt = bearingToXY(130, 9);
+
+    ctx.fillStyle = "#333333";
+    ctx.font = "13px Consolas";
+    ctx.textAlign = "center";
+    ctx.fillText("VAD-99", labelPt.x, labelPt.y - 4);
+    ctx.fillText("GND/UNL", labelPt.x, labelPt.y + 10);
+    ctx.textAlign = "left";
 
     ctx.restore();
 
 }
-// ======================================
-// Draw Traffic Circuit RWY 08/26
-// ======================================
 
-function drawTrafficCircuit(){
-    const end08 = bearingToXY(260,12);
-    const end26 = bearingToXY(80,12);
-    const dx = end26.x - end08.x;
-    const dy = end26.y - end08.y;
-    const len = Math.sqrt(dx*dx + dy*dy);
-
-    const px = -dy / len;
-    const py = dx / len;
-
-    const offset = nm(5);
-
-    const top08 = {
-        x:end08.x + px*offset,
-        y:end08.y + py*offset
-    };
-
-    const top26 = {
-        x:end26.x + px*offset,
-        y:end26.y + py*offset
-    };
-
-    const bot08 = {
-        x:end08.x - px*offset,
-        y:end08.y - py*offset
-    };
-
-    const bot26 = {
-        x:end26.x - px*offset,
-        y:end26.y - py*offset
-    };
-
-    ctx.strokeStyle="#FFFF00";
-    ctx.lineWidth=2;
-
-    // Upper box
-    ctx.beginPath();
-    ctx.moveTo(end08.x,end08.y);
-    ctx.lineTo(top08.x,top08.y);
-    ctx.lineTo(top26.x,top26.y);
-    ctx.lineTo(end26.x,end26.y);
-    ctx.stroke();
-
-    // Lower box
-    ctx.beginPath();
-    ctx.moveTo(end08.x,end08.y);
-    ctx.lineTo(bot08.x,bot08.y);
-    ctx.lineTo(bot26.x,bot26.y);
-    ctx.lineTo(end26.x,end26.y);
-    ctx.stroke();
-
-}
-// ======================================
-// Draw CCB VOR
-// ======================================
-
-function drawCCB(){
-
-    ctx.beginPath();
-    ctx.arc(CCB.x,CCB.y,4,0,Math.PI*2);
-
-    ctx.fillStyle="#00FFFF";
-    ctx.fill();
-
-    ctx.font="16px Arial";
-    ctx.fillStyle="#00FFFF";
-
-    ctx.fillText("CCB",CCB.x+8,CCB.y-8);
-
-}
-
-// ======================================
-// Draw ATS Routes
-// ======================================
-
-function drawRoutes(){
-
-    ctx.strokeStyle=ROUTE_COLOR;
-    ctx.lineWidth=2;
-
-    ROUTES.forEach(route=>{
-
-        const end = bearingToXY(route.bearing,60);
-
-        ctx.beginPath();
-        ctx.moveTo(CCB.x,CCB.y);
-        ctx.lineTo(end.x,end.y);
-        ctx.stroke();
-
-        const label = bearingToXY(route.bearing,56);
-
-        ctx.fillStyle = TEXT_COLOR;
-        ctx.font = "15px Consolas";
-
-        ctx.fillText(
-            route.name,
-            label.x-15,
-            label.y
-        );
-
-    });
-
-}
 // ======================================
 // TRAFFIC CIRCUIT CONFIGURATION
 // ======================================
@@ -1093,12 +580,42 @@ function drawAircraft(){
         const x = ac.x;
         const y = ac.y;
 
+        const isSelected =
+        (typeof selectedAircraft !== "undefined") &&
+        selectedAircraft === ac;
+
+        const acColor = isSelected
+        ? AIRCRAFT_SELECTED_COLOR
+        : AIRCRAFT_COLOR;
+
+
+        // =====================================
+        // History trail (last 3 seconds)
+        // =====================================
+
+        if(ac.trail && ac.trail.length){
+
+            ac.trail.forEach((pt,i)=>{
+
+                const fade = (i+1) / (ac.trail.length+1);
+
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, 2.5, 0, Math.PI*2);
+                ctx.fillStyle = isSelected
+                ? `rgba(255,215,0,${fade})`
+                : `rgba(0,204,0,${fade})`;
+                ctx.fill();
+
+            });
+
+        }
+
 
         // =====================================
         // Aircraft blip
         // =====================================
 
-        ctx.fillStyle = "#00FF00";
+        ctx.fillStyle = acColor;
 
         ctx.beginPath();
 
@@ -1132,7 +649,7 @@ function drawAircraft(){
         y + Math.sin(angle) * leaderLength;
 
 
-        ctx.strokeStyle = "#00FF00";
+        ctx.strokeStyle = acColor;
         ctx.lineWidth = 1;
 
 
@@ -1171,7 +688,7 @@ function drawAircraft(){
 
 
         ctx.textAlign = align;
-        ctx.fillStyle = "#00FF00";
+        ctx.fillStyle = acColor;
         ctx.font = "14px Consolas";
 
 
@@ -1282,10 +799,13 @@ function drawRadar(){
 
     drawBackground();
     drawRoutes();
+    drawNDBRoutes();
+    drawVAD99();
     drawRunway();
     drawTrafficCircuit();
     drawCentreline();
     drawCCB();
+    drawNDBs();
 
     drawUnknownBlips();
     drawAircraft();
@@ -1301,6 +821,18 @@ function drawRadar(){
 window.onload = function(){
 
     drawRadar();
+
+    const rwySelect = document.getElementById("runwaySelect");
+
+    if(rwySelect){
+
+        setActiveRunwayFromSelect(rwySelect.value);
+
+        rwySelect.onchange = function(){
+            setActiveRunwayFromSelect(this.value);
+        };
+
+    }
 
 };
 
