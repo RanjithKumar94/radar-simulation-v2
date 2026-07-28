@@ -475,9 +475,8 @@ function drawCentreline(){
 
     ctx.save();
 
-    ctx.strokeStyle = "#FFAA00";
-    ctx.lineWidth = 2;
-    ctx.setLineDash([10,6]);
+    ctx.strokeStyle = "#FFFFFF";
+    ctx.lineWidth = 1.5;
 
     const end15 = {
         x: touchdown.x + dir.x*nm(15),
@@ -488,9 +487,6 @@ function drawCentreline(){
     ctx.moveTo(touchdown.x, touchdown.y);
     ctx.lineTo(end15.x, end15.y);
     ctx.stroke();
-
-    ctx.setLineDash([]);
-    ctx.lineWidth = 1.5;
 
     for(let d=1; d<=15; d++){
 
@@ -509,14 +505,8 @@ function drawCentreline(){
         ctx.lineTo(p2.x, p2.y);
         ctx.stroke();
 
-        ctx.fillStyle = "#FFAA00";
-        ctx.font = "11px Consolas";
-        ctx.textAlign = "center";
-        ctx.fillText(d + "NM", center.x, center.y - half - 4);
-
     }
 
-    ctx.textAlign = "left";
     ctx.restore();
 
 }
@@ -574,16 +564,6 @@ function drawTrafficCircuit(){
         y:end2.y + py*offset
     };
 
-    const bot1 = {
-        x:end1.x - px*offset,
-        y:end1.y - py*offset
-    };
-
-    const bot2 = {
-        x:end2.x - px*offset,
-        y:end2.y - py*offset
-    };
-
     ctx.strokeStyle="#FFFFFF";
     ctx.lineWidth=2;
     ctx.beginPath();
@@ -593,13 +573,35 @@ function drawTrafficCircuit(){
     ctx.lineTo(end2.x,end2.y);
     ctx.stroke();
 
-    // Lower box
-    ctx.beginPath();
-    ctx.moveTo(end1.x,end1.y);
-    ctx.lineTo(bot1.x,bot1.y);
-    ctx.lineTo(bot2.x,bot2.y);
-    ctx.lineTo(end2.x,end2.y);
-    ctx.stroke();
+    // Flow-direction arrows along each leg
+    function drawFlowArrow(from, to){
+
+        const mx = (from.x+to.x)/2;
+        const my = (from.y+to.y)/2;
+
+        const segAngle = Math.atan2(to.y-from.y, to.x-from.x);
+        const arrowLen = 10;
+
+        ctx.save();
+        ctx.translate(mx,my);
+        ctx.rotate(segAngle);
+
+        ctx.beginPath();
+        ctx.moveTo(arrowLen,0);
+        ctx.lineTo(-arrowLen*0.5, arrowLen*0.5);
+        ctx.lineTo(-arrowLen*0.5, -arrowLen*0.5);
+        ctx.closePath();
+
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fill();
+
+        ctx.restore();
+
+    }
+
+    drawFlowArrow(end1, top1);
+    drawFlowArrow(top1, top2);
+    drawFlowArrow(top2, end2);
 
 }
 // ======================================
