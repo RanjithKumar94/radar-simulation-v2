@@ -116,8 +116,8 @@ level:150,
 targetLevel:150,
 verticalSpeed:0,
 
-speed:200,
-targetSpeed:200,
+speed:240,
+targetSpeed:240,
 
 ccbETA:"11:27",
 
@@ -212,8 +212,8 @@ level:80,
 targetLevel:80,
 verticalSpeed:0,
 
-speed:220,
-targetSpeed:220,
+speed:240,
+targetSpeed:240,
 
 ccbETA:"11:37",
 
