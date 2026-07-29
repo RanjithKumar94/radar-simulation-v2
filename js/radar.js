@@ -567,11 +567,6 @@ function drawCCB(){
     ctx.fillStyle="#00FFFF";
     ctx.fill();
 
-    ctx.font="16px Arial";
-    ctx.fillStyle="#00FFFF";
-
-    ctx.fillText("CCB",CCB.x+8,CCB.y-8);
-
 }
 
 // ======================================
@@ -1398,17 +1393,30 @@ const world = screenToWorld(mx, my);
         if(!ac.active) return;
 
         const angle = ac.labelAngle * Math.PI / 180;
-        const leaderLength = 35;
+        const leaderLength = 45;
 
-        const lx = ac.x + Math.cos(angle) * leaderLength;
-        const ly = ac.y + Math.sin(angle) * leaderLength;
+        const bx = ac.x + Math.cos(angle) * leaderLength;
+        const by = ac.y + Math.sin(angle) * leaderLength;
 
-        // Label hit box
+        const offX = ac.labelOffset ? ac.labelOffset.x : 0;
+        const offY = ac.labelOffset ? ac.labelOffset.y : 0;
+
+        const lx = bx + offX;
+        const ly = by + offY;
+
+        // Match the same left/right alignment the label is drawn with
+        const dirRight = Math.cos(angle) >= 0;
+        const labelX = dirRight ? lx + 8 : lx - 8;
+
+        const boxLeft  = dirRight ? labelX : labelX - 100;
+        const boxRight = dirRight ? labelX + 100 : labelX;
+
+        // Label hit box - covers the whole 3-line label, click anywhere on it
         if(
-            world.x >= lx &&
-            world.x <= lx + 100 &&
+            world.x >= boxLeft &&
+            world.x <= boxRight &&
             world.y >= ly - 20 &&
-            world.y <= ly + 35
+            world.y <= ly + 30
         ){
 console.log(
     "Clicked aircraft:",
