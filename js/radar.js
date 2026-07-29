@@ -1048,19 +1048,10 @@ function drawAircraft(){
         // Aircraft blip
         // =====================================
 
-        ctx.fillStyle = acColor;
+        ctx.strokeStyle = acColor;
+        ctx.lineWidth = 1.5;
 
-        ctx.beginPath();
-
-        ctx.arc(
-            x,
-            y,
-            4,
-            0,
-            Math.PI * 2
-        );
-
-        ctx.fill();
+        ctx.strokeRect(x - 4, y - 4, 8, 8);
 
 
 
