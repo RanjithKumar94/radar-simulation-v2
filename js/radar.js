@@ -161,8 +161,8 @@ function getNDB(name){
 
 const NDB_ROUTES = [
 
-    {name:"W-20", from:"PJ", track:160, length:30},
-    {name:"109 TR PJ", from:"PJ", track:109, length:30}
+    {name:"W-20", from:"PJ", track:160, length:33},
+    {name:"109 TR PJ", from:"PJ", track:109, length:50}
 
 ];
 
