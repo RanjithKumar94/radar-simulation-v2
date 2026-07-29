@@ -1028,16 +1028,13 @@ function drawAircraft(){
 
         if(ac.trail && ac.trail.length){
 
-            ac.trail.forEach((pt,i)=>{
+            ac.trail.forEach(pt=>{
 
-                const fade = 0.35 + (0.55 * (i+1) / ac.trail.length);
-
-                ctx.beginPath();
-                ctx.arc(pt.x, pt.y, 3.5, 0, Math.PI*2);
                 ctx.fillStyle = isSelected
-                ? `rgba(255,255,0,${fade})`
-                : `rgba(0,255,0,${fade})`;
-                ctx.fill();
+                ? AIRCRAFT_SELECTED_COLOR
+                : AIRCRAFT_COLOR;
+
+                ctx.fillRect(pt.x - 2, pt.y - 2, 4, 4);
 
             });
 
