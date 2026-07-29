@@ -60,8 +60,8 @@ document.getElementById("rwy26Blip").onclick = function(){
 
 };
 // Simulation Time
-let simHour = 11;
-let simMinute = 5;
+let simHour = 5;
+let simMinute = 0;
 let simSecond = 0;
 //--------------------------------------
 // Time Functions
@@ -398,6 +398,41 @@ const touchdownDistance = Math.max(
         : 0
     )
 );
+
+// ===============================
+// Localiser capture: if cleared to
+// intercept, turn onto final course
+// once the centreline is crossed
+// ===============================
+
+if(ac.locIntercept && !ac.established){
+
+    if(typeof getPerpDistanceToCentrelineNM === "function"){
+
+        const perpNM = getPerpDistanceToCentrelineNM(ac);
+
+        if(perpNM <= 1.5){
+
+            ac.targetHeading = RWY_LANDING_HEADING[activeRunwayDirection];
+            ac.turnDirection = "SHORTEST";
+
+            ac.established = true;
+            ac.locIntercept = false;
+
+        }
+
+    }
+
+}
+
+// Once established, switch to the final-approach descent
+// profile (existing logic below already ramps 2000ft -> 0
+// between 8.5NM and touchdown) as soon as we're in range.
+if(ac.established && touchdownDistance <= 8.5 && ac.targetLevel !== 0){
+
+    ac.targetLevel = 0;
+
+}
 
 // ===============================
 // Arrival phase at 8.5 NM (from touchdown)
