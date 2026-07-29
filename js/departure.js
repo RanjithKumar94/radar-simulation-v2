@@ -263,7 +263,7 @@ if(ac.heading !== ac.targetHeading){
 
         ac.trailTimer++;
 
-        if(ac.trailTimer >= 4){
+        if(ac.trailTimer >= 8){
 
             ac.trail.push({x:ac.x, y:ac.y});
 
