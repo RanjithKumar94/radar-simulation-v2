@@ -161,8 +161,8 @@ function getNDB(name){
 
 const NDB_ROUTES = [
 
-    {name:"W-20", from:"PJ", track:160, length:33},
-    {name:"109 TR PJ", from:"PJ", track:109, length:50}
+    {name:"W-20", from:"PJ", track:160, length:30},
+    {name:"109 TR PJ", from:"PJ", track:109, length:30}
 
 ];
 
@@ -1023,18 +1023,26 @@ function drawAircraft(){
 
 
         // =====================================
-        // History trail (last 4 positions)
+        // History trail (last 3-4 positions)
         // =====================================
 
         if(ac.trail && ac.trail.length){
 
             ac.trail.forEach(pt=>{
 
+                // Skip any point sitting right on top of the
+                // aircraft's own symbol - avoids a blurred/shaded
+                // look where the dot and the blip overlap.
+                const dx = pt.x - x;
+                const dy = pt.y - y;
+
+                if(Math.sqrt(dx*dx + dy*dy) < 5) return;
+
                 ctx.fillStyle = isSelected
                 ? AIRCRAFT_SELECTED_COLOR
                 : AIRCRAFT_COLOR;
 
-                ctx.fillRect(pt.x - 2, pt.y - 2, 4, 4);
+                ctx.fillRect(pt.x - 1.5, pt.y - 1.5, 3, 3);
 
             });
 
