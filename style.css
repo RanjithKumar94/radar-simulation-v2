@@ -58,13 +58,16 @@ body{
 
 #clock{
 
-    position:absolute;
-    top:15px;
-    left:20px;
+    text-align:center;
 
     color:#00ffff;
     font-size:22px;
     font-weight:bold;
+
+    margin-bottom:12px;
+    padding-bottom:12px;
+
+    border-bottom:1px solid #004400;
 
 }
 
