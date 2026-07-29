@@ -330,6 +330,36 @@ function getRunway0826Geometry(){
 // Landing heading (direction of travel while touching down) per runway direction
 const RWY_LANDING_HEADING = {"08":80, "26":260, "15":155, "33":335};
 
+// Two vector headings a controller would typically give to
+// intercept the localiser/centreline for each runway
+const INTERCEPT_HEADINGS = {
+    "08": [50, 110],
+    "26": [230, 290],
+    "15": [125, 185],
+    "33": [305, 5]
+};
+
+// Perpendicular distance (NM) from an aircraft to the extended
+// approach centreline of the active runway - used to detect
+// localiser capture.
+function getPerpDistanceToCentrelineNM(ac){
+
+    const touchdown = getTouchdownPoint(activeRunwayDirection);
+    const approachBearing = getApproachBearing(activeRunwayDirection);
+
+    const angle = (approachBearing - 90) * Math.PI / 180;
+    const dir = {x:Math.cos(angle), y:Math.sin(angle)};
+    const perp = {x:-dir.y, y:dir.x};
+
+    const dx = ac.x - touchdown.x;
+    const dy = ac.y - touchdown.y;
+
+    const perpPx = dx*perp.x + dy*perp.y;
+
+    return Math.abs(perpPx) / PIXELS_PER_NM;
+
+}
+
 function getApproachBearing(direction){
     return (RWY_LANDING_HEADING[direction] + 180) % 360;
 }
@@ -1050,13 +1080,33 @@ function drawAircraft(){
 
 
         // =====================================
-        // Aircraft blip
+        // Aircraft blip - diamond that rotates with true heading,
+        // nose tip pointing the direction of flight
         // =====================================
+
+        const hdgAngle = (ac.heading - 90) * Math.PI / 180;
+
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(hdgAngle);
 
         ctx.strokeStyle = acColor;
         ctx.lineWidth = 1.5;
 
-        ctx.strokeRect(x - 4, y - 4, 8, 8);
+        ctx.beginPath();
+        ctx.moveTo(6, 0);     // nose
+        ctx.lineTo(0, 4);
+        ctx.lineTo(-4, 0);    // tail
+        ctx.lineTo(0, -4);
+        ctx.closePath();
+        ctx.stroke();
+
+        ctx.fillStyle = acColor;
+        ctx.beginPath();
+        ctx.arc(0, 0, 1.4, 0, Math.PI*2);
+        ctx.fill();
+
+        ctx.restore();
 
 
 
@@ -1249,12 +1299,87 @@ window.onload = function(){
 
     const rwySelect = document.getElementById("runwaySelect");
 
+    function updateInterceptButtonLabels(){
+
+        const hdgs = INTERCEPT_HEADINGS[activeRunwayDirection] || [null,null];
+        const btn1 = document.getElementById("interceptHdg1");
+        const btn2 = document.getElementById("interceptHdg2");
+
+        if(btn1) btn1.textContent = hdgs[0] !== null
+            ? String(hdgs[0]).padStart(3,"0")
+            : "-";
+
+        if(btn2) btn2.textContent = hdgs[1] !== null
+            ? String(hdgs[1]).padStart(3,"0")
+            : "-";
+
+    }
+
     if(rwySelect){
 
         setActiveRunwayFromSelect(rwySelect.value);
+        updateInterceptButtonLabels();
 
         rwySelect.onchange = function(){
             setActiveRunwayFromSelect(this.value);
+            updateInterceptButtonLabels();
+        };
+
+    }
+
+    function clearForApproach(heading){
+
+        if(selectedAircraft == null){
+            alert("Select an aircraft first.");
+            return;
+        }
+
+        selectedAircraft.targetHeading = heading;
+        selectedAircraft.turnDirection = "SHORTEST";
+        selectedAircraft.targetLevel = 20;   // 2000 ft, until established
+        selectedAircraft.locIntercept = true;
+        selectedAircraft.established = false;
+
+    }
+
+    const interceptBtn1 = document.getElementById("interceptHdg1");
+    const interceptBtn2 = document.getElementById("interceptHdg2");
+
+    if(interceptBtn1){
+        interceptBtn1.onclick = function(){
+            const hdgs = INTERCEPT_HEADINGS[activeRunwayDirection];
+            if(hdgs) clearForApproach(hdgs[0]);
+        };
+    }
+
+    if(interceptBtn2){
+        interceptBtn2.onclick = function(){
+            const hdgs = INTERCEPT_HEADINGS[activeRunwayDirection];
+            if(hdgs) clearForApproach(hdgs[1]);
+        };
+    }
+
+    const discontinueBtn = document.getElementById("discontinueApproachBtn");
+
+    if(discontinueBtn){
+
+        discontinueBtn.onclick = function(){
+
+            if(selectedAircraft == null){
+                alert("Select an aircraft first.");
+                return;
+            }
+
+            selectedAircraft.locIntercept = false;
+            selectedAircraft.established = false;
+            selectedAircraft.approach = false;
+            selectedAircraft.arrivalPhase = false;
+
+            // Go around: climb, keep current heading
+            selectedAircraft.targetHeading = Math.round(selectedAircraft.heading);
+            selectedAircraft.turnDirection = "SHORTEST";
+            selectedAircraft.targetLevel = Math.round(selectedAircraft.level) + 20;
+
         };
 
     }
