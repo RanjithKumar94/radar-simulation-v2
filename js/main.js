@@ -60,8 +60,8 @@ document.getElementById("rwy26Blip").onclick = function(){
 
 };
 // Simulation Time
-let simHour = 11;
-let simMinute = 05;
+let simHour = 5;
+let simMinute = 0;
 let simSecond = 0;
 //--------------------------------------
 // Time Functions
@@ -513,7 +513,7 @@ if(ac.approach){
 
         ac.trailTimer++;
 
-        if(ac.trailTimer >= 4){
+        if(ac.trailTimer >= 8){
 
             ac.trail.push({x:ac.x, y:ac.y});
 
