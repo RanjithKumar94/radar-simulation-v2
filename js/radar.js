@@ -662,11 +662,11 @@ function drawNDBRoutes(){
 
 const VAD99 = [
 
-    {bearing:128, distance:14},   // A
+    {bearing:125, distance:14},   // A
     {bearing:117, distance:19},   // B
     {bearing:137, distance:25},   // C
-    {bearing:147, distance:23},   // D
-    {bearing:143, distance:14}    // E
+    {bearing:145, distance:23},   // D
+    {bearing:140, distance:14}    // E
 
 ];
 
@@ -1335,8 +1335,14 @@ canvas.addEventListener("click", function(e){
 
     const rect = canvas.getBoundingClientRect();
 
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
+    // The canvas can now render smaller than its internal 900x900
+    // resolution (responsive/mobile layout), so raw client
+    // coordinates must be scaled up to canvas-internal pixel space.
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
+    const mx = (e.clientX - rect.left) * scaleX;
+    const my = (e.clientY - rect.top) * scaleY;
 
     // =====================================
     // RBL mode: click aircraft OR any point,
