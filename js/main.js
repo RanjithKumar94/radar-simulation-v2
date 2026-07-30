@@ -60,8 +60,8 @@ document.getElementById("rwy26Blip").onclick = function(){
 
 };
 // Simulation Time
-let simHour = 11;
-let simMinute = 5;
+let simHour = 5;
+let simMinute = 0;
 let simSecond = 0;
 //--------------------------------------
 // Time Functions
@@ -109,7 +109,7 @@ document.getElementById("applyBtn").onclick = function(){
     const descentRate = descentEl ? descentEl.value : "";
 
     if(hdg !== "")
-        selectedAircraft.targetHeading = parseInt(hdg);
+        selectedAircraft.targetHeading = parseInt(hdg) % 360;
 
     if(lvl !== "")
         selectedAircraft.targetLevel = parseInt(lvl);
@@ -411,7 +411,7 @@ if(ac.locIntercept && !ac.established){
 
         const perpNM = getPerpDistanceToCentrelineNM(ac);
 
-        if(perpNM <= 1.5){
+        if(perpNM <= 3){
 
             ac.targetHeading = RWY_LANDING_HEADING[activeRunwayDirection];
             ac.turnDirection = "SHORTEST";
