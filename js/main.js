@@ -61,7 +61,7 @@ document.getElementById("rwy26Blip").onclick = function(){
 };
 // Simulation Time
 let simHour = 11;
-let simMinute = 5;
+let simMinute = 10;
 let simSecond = 0;
 //--------------------------------------
 // Time Functions
@@ -390,14 +390,10 @@ if(ac.heading !== ac.targetHeading){
 // getTouchdownCorrectionNM in radar.js)
 // ===============================
 
-const touchdownDistance = Math.max(
-    0,
-    ac.distance + (
-        typeof getTouchdownCorrectionNM === "function"
-        ? getTouchdownCorrectionNM(activeRunwayDirection)
-        : 0
-    )
-);
+const touchdownDistance = Math.sqrt(
+    (ac.x - CCB.x)*(ac.x - CCB.x) +
+    (ac.y - CCB.y)*(ac.y - CCB.y)
+) / PIXELS_PER_NM;
 
 // ===============================
 // Localiser capture: if cleared to
@@ -631,14 +627,10 @@ if(ac.approach){
         // Landing (based on distance to touchdown)
         // ===============================
 
-        const landingTouchdownDistance = Math.max(
-            0,
-            ac.distance + (
-                typeof getTouchdownCorrectionNM === "function"
-                ? getTouchdownCorrectionNM(activeRunwayDirection)
-                : 0
-            )
-        );
+        const landingTouchdownDistance = Math.sqrt(
+            (ac.x - CCB.x)*(ac.x - CCB.x) +
+            (ac.y - CCB.y)*(ac.y - CCB.y)
+        ) / PIXELS_PER_NM;
 
         if(landingTouchdownDistance <= 0.1 && ac.level <= 0){
 
