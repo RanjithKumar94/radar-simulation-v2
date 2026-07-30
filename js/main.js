@@ -60,8 +60,8 @@ document.getElementById("rwy26Blip").onclick = function(){
 
 };
 // Simulation Time
-let simHour = 11;
-let simMinute = 05;
+let simHour = 5;
+let simMinute = 0;
 let simSecond = 0;
 //--------------------------------------
 // Time Functions
@@ -413,13 +413,60 @@ if(ac.locIntercept && !ac.established){
 
         if(perpNM <= 3){
 
-            ac.targetHeading = RWY_LANDING_HEADING[activeRunwayDirection];
-            ac.turnDirection = "SHORTEST";
-
             ac.established = true;
             ac.locIntercept = false;
 
         }
+
+    }
+
+}
+
+// While established but not yet exactly on the centreline,
+// steer toward a point further down the line (not just the
+// final heading) so the aircraft actually converges onto it
+// instead of flying parallel beside it.
+if(ac.established){
+
+    const touchdown = getTouchdownPoint(activeRunwayDirection);
+    const inboundHeading = RWY_LANDING_HEADING[activeRunwayDirection];
+    const inboundAngle = (inboundHeading - 90) * Math.PI / 180;
+    const inboundDir = {x:Math.cos(inboundAngle), y:Math.sin(inboundAngle)};
+    const perpDir = {x:-inboundDir.y, y:inboundDir.x};
+
+    const dx = ac.x - touchdown.x;
+    const dy = ac.y - touchdown.y;
+
+    const alongPx = dx*inboundDir.x + dy*inboundDir.y;
+    const perpPx = dx*perpDir.x + dy*perpDir.y;
+    const perpNM = Math.abs(perpPx) / PIXELS_PER_NM;
+
+    if(perpNM <= 0.05){
+
+        // Close enough - hold the exact final course
+        ac.targetHeading = inboundHeading;
+
+    }
+    else{
+
+        // Aim at a point on the centreline, 3NM closer to
+        // touchdown than our current along-track position
+        // (but never past touchdown itself)
+        const leadPx = 3 * PIXELS_PER_NM;
+        let aimAlongPx = alongPx + leadPx;
+
+        if(aimAlongPx > 0) aimAlongPx = 0;
+
+        const aimX = touchdown.x + inboundDir.x*aimAlongPx;
+        const aimY = touchdown.y + inboundDir.y*aimAlongPx;
+
+        let bearingToAim =
+        (Math.atan2(aimY - ac.y, aimX - ac.x) * 180 / Math.PI) + 90;
+
+        bearingToAim = (bearingToAim + 360) % 360;
+
+        ac.targetHeading = Math.round(bearingToAim);
+        ac.turnDirection = "SHORTEST";
 
     }
 
