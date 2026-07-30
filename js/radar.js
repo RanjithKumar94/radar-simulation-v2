@@ -161,8 +161,8 @@ function getNDB(name){
 
 const NDB_ROUTES = [
 
-    {name:"W-20", from:"PJ", track:160, length:33},
-    {name:"109 TR PJ", from:"PJ", track:109, length:45}
+    {name:"W-20", from:"PJ", track:160, length:30},
+    {name:"109 TR PJ", from:"PJ", track:109, length:30}
 
 ];
 
@@ -1094,10 +1094,10 @@ function drawAircraft(){
         ctx.lineWidth = 1.5;
 
         ctx.beginPath();
-        ctx.moveTo(6, 0);     // nose
-        ctx.lineTo(0, 4);
-        ctx.lineTo(-4, 0);    // tail
-        ctx.lineTo(0, -4);
+        ctx.moveTo(5, 0);     // nose corner
+        ctx.lineTo(0, 5);
+        ctx.lineTo(-5, 0);
+        ctx.lineTo(0, -5);
         ctx.closePath();
         ctx.stroke();
 
@@ -1376,7 +1376,7 @@ window.onload = function(){
             selectedAircraft.arrivalPhase = false;
 
             // Go around: climb, keep current heading
-            selectedAircraft.targetHeading = Math.round(selectedAircraft.heading);
+            selectedAircraft.targetHeading = Math.round(selectedAircraft.heading) % 360;
             selectedAircraft.turnDirection = "SHORTEST";
             selectedAircraft.targetLevel = Math.round(selectedAircraft.level) + 20;
 
