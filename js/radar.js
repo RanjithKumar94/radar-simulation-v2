@@ -366,39 +366,19 @@ function getApproachBearing(direction){
 
 function getTouchdownPoint(direction){
 
-    if(direction === "08" || direction === "26"){
-        const geo = getRunway0826Geometry();
-        return direction === "08" ? geo.touchdown08 : geo.touchdown26;
-    }
-
-    // No survey data given yet for 15/33 - falls back to CCB
-    // (zero correction) until that runway's dimensions are provided.
+    // Per request: altitude reaches 0 at CCB, and the approach
+    // centreline/intercept geometry is anchored there too - the
+    // real 08/26 offset geometry is kept only for drawing the
+    // physical runway rectangle, not for these calculations.
     return {x: CCB.x, y: CCB.y};
 
 }
 
-// How much to correct "distance to CCB" into "distance to touchdown",
-// projected along the inbound approach track (NM). Positive = touchdown
-// is further along the inbound track than CCB (aircraft has further to
-// go); negative = touchdown is closer than CCB.
+// Distance correction is now always 0 (touchdown = CCB) -
+// kept as a function so existing call sites don't need changes.
 function getTouchdownCorrectionNM(direction){
 
-    if(direction !== "08" && direction !== "26") return 0;
-
-    const geo = getRunway0826Geometry();
-    const touchdown = direction === "08" ? geo.touchdown08 : geo.touchdown26;
-
-    const landingAngle =
-    (RWY_LANDING_HEADING[direction] - 90) * Math.PI / 180;
-
-    const inboundDir = {x:Math.cos(landingAngle), y:Math.sin(landingAngle)};
-
-    const dx = touchdown.x - CCB.x;
-    const dy = touchdown.y - CCB.y;
-
-    const alongPx = dx*inboundDir.x + dy*inboundDir.y;
-
-    return alongPx / PIXELS_PER_NM;
+    return 0;
 
 }
 
